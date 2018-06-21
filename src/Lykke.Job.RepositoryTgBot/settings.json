@@ -1,0 +1,19 @@
+{
+  //"SecTokenPassword": "TestPwd",
+  //"Db": "DbConnStr",
+  "RepositoryTgBotJob": {
+    "Db": {
+      "LogsConnString": "UseDevelopmentStorage=true"
+    },
+
+    "BotToken": "550158658:AAF5-fx3EkPcztpZDEzWCmCED69euiJ_Gfo"
+  },
+
+  "SlackNotifications": {
+    "AzureQueue": {
+      "ConnectionString": "UseDevelopmentStorage=true",
+      "QueueName": "slack-notifications"
+    },
+    "ThrottlingLimitSeconds": 60
+  }
+}
