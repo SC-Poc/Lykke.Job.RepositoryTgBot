@@ -54,26 +54,30 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         }
 
         public async Task CreateRepo(int teamId, string repoName, string description, bool addSecurityTeam = false, bool addCoreTeam = false)
-        {
-            //TODO: CreateRepo
+        {           
             var team = await client.Organization.Team.Get(teamId);
 
+            var codeOwnersFile = $"* @{_organisation}/{team.Name} ";
+
+            //Creating new repo
             var newRepo = new NewRepository(repoName) { AutoInit = true, TeamId = team.Id, Description = description };
             newRepo.TeamId = team.Id;
 
             var repositoryToEdit = await client.Repository.Create(_organisation, newRepo);
 
+            //Assigning new repo to the team
+            await client.Organization.Team.AddRepository(team.Id, _organisation, repositoryToEdit.Name, new RepositoryPermissionRequest(Permission.Admin));
+
             var branchTeams = new BranchProtectionTeamCollection();
 
             branchTeams.Add(team.Name);
-
-            await client.Organization.Team.AddRepository(team.Id, _organisation, repositoryToEdit.Name, new RepositoryPermissionRequest(Permission.Admin));
 
             if (addSecurityTeam)
             {
                 var secTeam = await GetTeamByName("Security");
                 await client.Organization.Team.AddRepository(secTeam.Id, _organisation, repositoryToEdit.Name, new RepositoryPermissionRequest(Permission.Push));
                 branchTeams.Add("Security");
+                codeOwnersFile += $"@{_organisation}/Security ";
             }
 
             if (addCoreTeam)
@@ -81,20 +85,23 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 var secTeam = await GetTeamByName("Core");
                 await client.Organization.Team.AddRepository(secTeam.Id, _organisation, repositoryToEdit.Name,new RepositoryPermissionRequest(Permission.Push));
                 branchTeams.Add("Core");
+                codeOwnersFile += $"@{_organisation}/Core ";
             }
 
-            var masterSha = await client.Repository.Commit.GetSha1(repositoryToEdit.Id, "refs/heads/master");
+            //creating Code Owners file
+            await client.Repository.Content.CreateFile(repositoryToEdit.Id, "CODEOWNERS", new CreateFileRequest("Added CODEOWNERS file", codeOwnersFile));
 
             //creating "dev" and "test" branches from master
+            var masterSha = await client.Repository.Commit.GetSha1(repositoryToEdit.Id, "refs/heads/master");
+
             await client.Git.Reference.Create(repositoryToEdit.Id, new NewReference("refs/heads/dev", masterSha));
             await client.Git.Reference.Create(repositoryToEdit.Id, new NewReference("refs/heads/test", masterSha));
             
+            //Permitions to "test" and "master" branches
             var masterProtSett = new BranchProtectionSettingsUpdate(new BranchProtectionPushRestrictionsUpdate(branchTeams));
             var testProtSett = new BranchProtectionSettingsUpdate( null, new BranchProtectionRequiredReviewsUpdate(new BranchProtectionRequiredReviewsDismissalRestrictionsUpdate(false), true, true),new BranchProtectionPushRestrictionsUpdate(branchTeams), true);
 
             await client.Repository.Branch.UpdateBranchProtection(repositoryToEdit.Id, "master", masterProtSett);
-
-
             await client.Repository.Branch.UpdateBranchProtection(repositoryToEdit.Id, "test", testProtSett);
 
         }
