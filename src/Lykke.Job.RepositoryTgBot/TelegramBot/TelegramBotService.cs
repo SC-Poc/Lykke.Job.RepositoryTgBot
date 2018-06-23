@@ -27,7 +27,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         private readonly ILog _log;
         private readonly ITelegramBotClient _bot;
         Message _oldMessage = null;
-        private readonly TelegramBotActions _actions = new TelegramBotActions("LykkeCity", "44ae18190deda89ef9ca38a760f42e17cf019c31");
+        private readonly TelegramBotActions _actions = new TelegramBotActions("TgBotTestOrg", "");
 
         #region Constants
         private const string _createGithubRepo = "CreateGithubRepo";
@@ -131,16 +131,18 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
         private async void BotOnCallbackQueryReceived(object sender, CallbackQueryEventArgs callbackQueryEventArgs)
         {
-            Console.WriteLine("BotOnCallbackQueryReceived");
+            
 
             //Here implements actions on reciving
             var callbackQuery = callbackQueryEventArgs.CallbackQuery;
+
+            Console.WriteLine("BotOnCallbackQueryReceived - " + callbackQuery.Message.Text);
 
             if (callbackQuery.Data == _createGithubRepo)
             {
                 await SendResposeMarkup(_createGithubRepo, callbackQuery.Message);
             }
-            else if (callbackQuery.Data == _chooseTeam)
+            else if (callbackQuery.Message.Text == _chooseTeam)
             {
                 var userName = callbackQuery.From.Username;
                 var userResult = await _actions.AddUserInTeam(userName, Convert.ToInt32(callbackQuery.Data));
