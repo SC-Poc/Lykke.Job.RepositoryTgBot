@@ -57,36 +57,44 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             //TODO: CreateRepo
             var team = await client.Organization.Team.Get(teamId);
 
-            var newRepo = new NewRepository(repoName) { AutoInit = true, TeamId = teamId, Description = description };
+            var newRepo = new NewRepository(repoName) { AutoInit = true, TeamId = team.Id, Description = description };
             newRepo.TeamId = team.Id;
-            var repositoryToEdit = await client.Repository.Create(_organisation, newRepo);
+
+            var repositoryToEdit = await client.Repository.Branch.(_organisation, newRepo);
 
             var branchTeams = new BranchProtectionTeamCollection();
 
             branchTeams.Add(team.Name);
 
+            await client.Organization.Team.AddRepository(team.Id, _organisation, repositoryToEdit.Name, new RepositoryPermissionRequest(Permission.Admin));
+
             if (addSecurityTeam)
             {
                 var secTeam = await GetTeamByName("Security");
-                await client.Organization.Team.AddRepository(secTeam.Id, _organisation, repositoryToEdit.Name, new RepositoryPermissionRequest(Permission.Admin));
+                await client.Organization.Team.AddRepository(secTeam.Id, _organisation, repositoryToEdit.Name, new RepositoryPermissionRequest(Permission.Push));
                 branchTeams.Add("Security");
             }
 
             if (addCoreTeam)
             {
                 var secTeam = await GetTeamByName("Core");
-                await client.Organization.Team.AddRepository(secTeam.Id, _organisation, repositoryToEdit.Name,new RepositoryPermissionRequest(Permission.Admin));
+                await client.Organization.Team.AddRepository(secTeam.Id, _organisation, repositoryToEdit.Name,new RepositoryPermissionRequest(Permission.Push));
                 branchTeams.Add("Core");
             }
 
-            var reference = await client.Repository.Commit.GetSha1(repositoryToEdit.Id, "master");
+            var masterSha = await client.Repository.Commit.GetSha1(repositoryToEdit.Id, "refs/heads/master");
 
+            //creating "dev" and "test" branches from master
+            await client.Git.Reference.Create(repositoryToEdit.Id, new NewReference("refs/heads/dev", masterSha));
+            await client.Git.Reference.Create(repositoryToEdit.Id, new NewReference("refs/heads/test", masterSha));
             
-            var branchProtSett = new BranchProtectionSettingsUpdate(new BranchProtectionPushRestrictionsUpdate(branchTeams));
-            await client.Repository.Branch.UpdateBranchProtection(repositoryToEdit.Id, "master", branchProtSett);
+            var masterProtSett = new BranchProtectionSettingsUpdate(new BranchProtectionPushRestrictionsUpdate(branchTeams));
+            var testProtSett = new BranchProtectionSettingsUpdate( null, new BranchProtectionRequiredReviewsUpdate(new BranchProtectionRequiredReviewsDismissalRestrictionsUpdate(false), true, true),new BranchProtectionPushRestrictionsUpdate(branchTeams), true);
 
-            //await client.Repository.Branch.AddProtectedBranchTeamRestrictions(repositoryToEdit.Id, "master", branchTeams);
-            //await client.Repository.Branch.AddProtectedBranchTeamRestrictions(repositoryToEdit.Id, "test", branchTeams);
+            await client.Repository.Branch.UpdateBranchProtection(repositoryToEdit.Id, "master", masterProtSett);
+
+
+            await client.Repository.Branch.UpdateBranchProtection(repositoryToEdit.Id, "test", testProtSett);
 
         }
 
