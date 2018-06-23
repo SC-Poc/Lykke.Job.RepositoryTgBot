@@ -19,54 +19,99 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             client.Credentials = tokenAuth;
         }
 
-        public async Task<List<string>> GetTeamsAsync()
+        public async Task<List<Team>> GetTeamsAsync()
         {
             var teams = await client.Organization.Team.GetAll(_organisation);
 
-            var teamsList = new List<string>();
+            var teamsList = new List<Team>();
 
             foreach (var team in teams)
             {
-                teamsList.Add(team.Name);
-                Console.WriteLine(team.Name);
+                teamsList.Add(team);
             }
 
             return teamsList;
         }
 
+        public async Task<Team> UserHasTeamCheckAsync(string nickName)
+        {
+            var teams = await client.Organization.Team.GetAll(_organisation);
+
+            foreach (var team in teams)
+            {
+                var teamCheck =  await TeamMemberCheckAsync(nickName, team);
+                if (teamCheck)
+                    return team;
+            }
+
+            return null;
+        }
+
         public async Task<bool> OrgMemberCheckAsync(string nickName)
         {
             var inOrganisation = await client.Organization.Member.CheckMember(_organisation, nickName);
-
-            Console.WriteLine("Org check -" + inOrganisation);
-
             return inOrganisation;
         }
 
-        public async Task CreateRepo(string teamName, string repoName)
+        public async Task CreateRepo(int teamId, string repoName, string description, bool addSecurityTeam = false, bool addCoreTeam = false)
         {
             //TODO: CreateRepo
-        }
+            var team = await client.Organization.Team.Get(teamId);
 
-        public async Task AddDescrToRepo(string teamName, string repoName)
-        {
-            var team = await GetTeamByName(teamName);
-            await client.Organization.Team.GetAllRepositories(team.Id);
+            var newRepo = new NewRepository(repoName) { AutoInit = true, TeamId = team.Id, Description = description };
+            newRepo.TeamId = team.Id;
+
+            var repositoryToEdit = await client.Repository.Create(_organisation, newRepo);
+
+            var branchTeams = new BranchProtectionTeamCollection();
+
+            branchTeams.Add(team.Name);
+
+            await client.Organization.Team.AddRepository(team.Id, _organisation, repositoryToEdit.Name, new RepositoryPermissionRequest(Permission.Admin));
+
+            if (addSecurityTeam)
+            {
+                var secTeam = await GetTeamByName("Security");
+                await client.Organization.Team.AddRepository(secTeam.Id, _organisation, repositoryToEdit.Name, new RepositoryPermissionRequest(Permission.Push));
+                branchTeams.Add("Security");
+            }
+
+            if (addCoreTeam)
+            {
+                var secTeam = await GetTeamByName("Core");
+                await client.Organization.Team.AddRepository(secTeam.Id, _organisation, repositoryToEdit.Name,new RepositoryPermissionRequest(Permission.Push));
+                branchTeams.Add("Core");
+            }
+
+            var masterSha = await client.Repository.Commit.GetSha1(repositoryToEdit.Id, "refs/heads/master");
+
+            //creating "dev" and "test" branches from master
+            await client.Git.Reference.Create(repositoryToEdit.Id, new NewReference("refs/heads/dev", masterSha));
+            await client.Git.Reference.Create(repositoryToEdit.Id, new NewReference("refs/heads/test", masterSha));
+            
+            var masterProtSett = new BranchProtectionSettingsUpdate(new BranchProtectionPushRestrictionsUpdate(branchTeams));
+            var testProtSett = new BranchProtectionSettingsUpdate( null, new BranchProtectionRequiredReviewsUpdate(new BranchProtectionRequiredReviewsDismissalRestrictionsUpdate(false), true, true),new BranchProtectionPushRestrictionsUpdate(branchTeams), true);
+
+            await client.Repository.Branch.UpdateBranchProtection(repositoryToEdit.Id, "master", masterProtSett);
+
+
+            await client.Repository.Branch.UpdateBranchProtection(repositoryToEdit.Id, "test", testProtSett);
+
         }
 
         /// <summary>
         /// Returns string with result as answer
         /// </summary>
         /// <param name="nickName"></param>
-        /// <param name="teamName"></param>
+        /// <param name="teamId"></param>
         /// <returns> </returns>
-        public async Task<TelegramBotActionResult> AddUserInTeam(string nickName, string teamName)
+        public async Task<TelegramBotActionResult> AddUserInTeam(string nickName, int teamId)
         {
-            var team = await GetTeamByName(teamName);
+            var team = await client.Organization.Team.Get(teamId);
 
             if (team == null)
                 //return success false with message
-                return new TelegramBotActionResult { Success = false, Message = $"There are no team with name: {teamName}." };
+                return new TelegramBotActionResult { Success = false, Message = $"There are such no teams." };
 
             var userInTeam = await TeamMemberCheckAsync(nickName, team);
 

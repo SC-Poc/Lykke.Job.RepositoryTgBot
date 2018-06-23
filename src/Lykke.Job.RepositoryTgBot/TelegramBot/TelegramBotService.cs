@@ -143,7 +143,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             else if (callbackQuery.Data == _chooseTeam)
             {
                 var userName = callbackQuery.From.Username;
-                var userResult = await _actions.AddUserInTeam(userName, callbackQuery.Data);
+                var userResult = await _actions.AddUserInTeam(userName, Convert.ToInt32(callbackQuery.Data));
                 if (!userResult.Success)
                 {
                     await SendTextToUser(callbackQuery.Message.Chat.Id, userResult.Message);
@@ -245,7 +245,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                                 buttons.RemoveRange(0, maxColLength);
                             }
 
-                            buttons.Add(InlineKeyboardButton.WithCallbackData(team, team));
+                            buttons.Add(InlineKeyboardButton.WithCallbackData(team.Name, team.Id.ToString()));
                         }
 
                         var keyboardMarkup = new InlineKeyboardMarkup(inlineKeyBoardButtons);
