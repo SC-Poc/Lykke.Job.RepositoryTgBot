@@ -60,7 +60,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             var newRepo = new NewRepository(repoName) { AutoInit = true, TeamId = team.Id, Description = description };
             newRepo.TeamId = team.Id;
 
-            var repositoryToEdit = await client.Repository.Branch.(_organisation, newRepo);
+            var repositoryToEdit = await client.Repository.Create(_organisation, newRepo);
 
             var branchTeams = new BranchProtectionTeamCollection();
 
