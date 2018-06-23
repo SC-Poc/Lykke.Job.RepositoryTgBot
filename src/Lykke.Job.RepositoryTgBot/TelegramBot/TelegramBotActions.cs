@@ -1,6 +1,7 @@
 ﻿using Octokit;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Lykke.Job.RepositoryTgBot.TelegramBot
@@ -44,7 +45,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
         public async Task CreateRepo(string teamName, string repoName)
         {
-           //TODO: CreateRepo
+            //TODO: CreateRepo
         }
 
         public async Task AddDescrToRepo(string teamName, string repoName)
@@ -59,50 +60,71 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         /// <param name="nickName"></param>
         /// <param name="teamName"></param>
         /// <returns> </returns>
-        public async Task<string> AddUserInTeam(string nickName, string teamName)
+        public async Task<TelegramBotActionResult> AddUserInTeam(string nickName, string teamName)
         {
             var team = await GetTeamByName(teamName);
 
             if (team == null)
-                return $"There are no team with name: {teamName}.";
+                //return success false with message
+                return new TelegramBotActionResult { Success = false, Message = $"There are no team with name: {teamName}." };
 
             var userInTeam = await TeamMemberCheckAsync(nickName, team);
 
             if (userInTeam)
-                return $"User {nickName} alrady in team: {team.Name}.";
+                //return success false with message
+                return new TelegramBotActionResult { Success = false, Message = $"User {nickName} alrady in team: {team.Name}." };
 
             await client.Organization.Team.AddOrEditMembership(team.Id, nickName, new UpdateTeamMembership(TeamRole.Member));
-            return $"User {nickName} added in team {team.Name} as a member."; ;
+
+            //return success true with message
+            return new TelegramBotActionResult { Success = false, Message = $"User {nickName} added in team {team.Name} as a member." };
+        }
+
+        public async Task<TelegramBotActionResult> AddRepositoryInTeam(string teamName, string repoName, Permission permission)
+        {
+            var team = await GetTeamByName(teamName);
+
+            if (team == null)
+                //return success false with message
+                return new TelegramBotActionResult { Success = false, Message = $"There are no team with name: {teamName}." };
+
+            var repoInTeam = await TeamRepoCheckAsync(repoName, team.Id);
+
+            if(repoInTeam)
+                //return success false with message
+                return new TelegramBotActionResult { Success = false, Message = $"Repository {repoName} alrady in team: {team.Name}." };
+            
+            var result = await client.Organization.Team.AddRepository(team.Id, _organisation, repoName, new RepositoryPermissionRequest(permission));
+
+            //return success true with message
+            var message = result ? $"Repository {repoName} added in team {team.Name}" : "Error occured, try again later, please";
+            return new TelegramBotActionResult{Success = result, Message = message};
         }
 
         private async Task<Team> GetTeamByName(string teamName)
         {
             var teams = await client.Organization.Team.GetAll(_organisation);
-            foreach (var team in teams)
-            {
-                if (teamName == team.Name)
-                {
-                    return team;
-                }
-            }
-            return null;
+            return teams.FirstOrDefault(team => teamName == team.Name);
         }
 
         private async Task<bool> TeamMemberCheckAsync(string nickName, Team team)
         {
-
             var members = await client.Organization.Team.GetAllMembers(team.Id);
 
-            foreach (var member in members)
-            {
-                if (nickName == member.Name)
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return members.Any(x => x.Name == nickName);
         }
 
+        private async Task<bool> TeamRepoCheckAsync(string repoName, int teamId)
+        {
+            var repositories = await client.Organization.Team.GetAllRepositories(teamId);
+
+            return repositories.Any(x => x.Name == repoName);
+        }
+    }
+
+    public class TelegramBotActionResult
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; }
     }
 }

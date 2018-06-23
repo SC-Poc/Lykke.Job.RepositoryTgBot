@@ -2,9 +2,11 @@
 using Common;
 using Common.Log;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Octokit;
 using Telegram.Bot;
 using Telegram.Bot.Args;
 using Telegram.Bot.Types;
@@ -24,8 +26,17 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
     {
         private readonly ILog _log;
         private readonly ITelegramBotClient _bot;
-        Message oldMessage = null;
-        TelegramBotActions actions = new TelegramBotActions("LykkeCity", "470ad0b7f6e017f98f83ef5d292ad49dd9110c63");
+        Message _oldMessage = null;
+        private readonly TelegramBotActions _actions = new TelegramBotActions("LykkeCity", "44ae18190deda89ef9ca38a760f42e17cf019c31");
+
+        #region Constants
+        private const string _createGithubRepo = "CreateGithubRepo";
+        private const string _chooseTeam = "What is your team?";
+        private const string _questionEnterName = "Enter repository name";
+        private const string _questionEnterDesc = "Enter repository description";
+        private const string _questionSecurity = "Will service interact with sensitive data, finance operations or includes other security risks?";
+        private const string _questionMultipleTeams = "Is it a common service which will be used by multiple teams?";
+        #endregion
 
         public TelegramBotService(string token, ILog log)
         {
@@ -43,130 +54,110 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
         private async void BotOnMessageReceived(object sender, MessageEventArgs messageEventArgs)
         {
-            if (oldMessage != null)
+            Console.WriteLine("BotOnMessageReceived");
+
+            if (_oldMessage != null)
             {
 
-                Console.WriteLine(oldMessage.Text);
+                Console.WriteLine(_oldMessage.Text);
             }
 
-            oldMessage = messageEventArgs.Message;
-
-
+            _oldMessage = messageEventArgs.Message;
 
             var message = messageEventArgs.Message;
 
             if (message == null || message.Type != MessageType.Text) return;
 
-            switch (message.Text.Split(' ').First())
+            // get repository name
+            if (message.ReplyToMessage?.Text == _questionEnterName)
             {
-                // send inline keyboard
-                case "/inline":
-                    await _bot.SendChatActionAsync(message.Chat.Id, ChatAction.Typing);
+                await _bot.SendTextMessageAsync(message.Chat.Id, _questionEnterDesc, replyMarkup: new ForceReplyMarkup { Selective = false });
+            }
+            // get repository description
+            else if (message.ReplyToMessage?.Text == _questionEnterDesc)
+            {
+                ReplyKeyboardMarkup securityKeyboard = new[]
+                {
+                    new[] {"Yes, secured", "Not secured"}
+                };
 
-                    await Task.Delay(500); // simulate longer running task
+                securityKeyboard.ResizeKeyboard = true;
 
-                    var inlineKeyboard = GetInlineKeyboardMarkup("Main menu");
-                    
-                    await _bot.SendTextMessageAsync(
-                        message.Chat.Id,
-                        inlineKeyboard.Text,
-                        replyMarkup: inlineKeyboard.ReplyMarkup);
-                    break;
+                await _bot.SendTextMessageAsync(
+                    message.Chat.Id,
+                    _questionSecurity,
+                    replyMarkup: securityKeyboard);
+            }
+            // get security question's answer
+            else if (message.Text == "Yes, secured")
+            {
+                ReplyKeyboardMarkup multipleTeams = new[]
+                {
+                    new[] {"Yes", "No"}
+                };
 
-                // send custom keyboard
-                case "/keyboard":
-                    ReplyKeyboardMarkup ReplyKeyboard = new[]
-                    {
-                        new[] { "1.1", "1.2" },
-                        new[] { "2.1", "2.2" },
-                    };
+                multipleTeams.ResizeKeyboard = true;
 
-                    await _bot.SendTextMessageAsync(
-                        message.Chat.Id,
-                        "Choose",
-                        replyMarkup: ReplyKeyboard);
-                    break;
+                await _bot.SendTextMessageAsync(
+                    message.Chat.Id,
+                    _questionMultipleTeams,
+                    replyMarkup: multipleTeams);
+            }
+            // get multiple teams question's answer
+            else if (message.Text == "Yes")
+            {
+                await SendTextToUser(message.Chat.Id);
+            }
+            // read commands
+            else
+            {
+                switch (message.Text.Split(' ').First())
+                {
+                    // send inline keyboard
+                    case "/inline":
+                        await _bot.SendChatActionAsync(message.Chat.Id, ChatAction.Typing);
 
-                // send a photo
-                case "/photo":
-                    await _bot.SendChatActionAsync(message.Chat.Id, ChatAction.UploadPhoto); 
+                        await Task.Delay(500); // simulate longer running task
 
-                    const string file = @"TelegramBot/image.png";
-
-                    var fileName = file.Split(Path.DirectorySeparatorChar).Last();
-
-                    using (var fileStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
-                    {
-                        await _bot.SendPhotoAsync(
-                            message.Chat.Id,
-                            fileStream,
-                            "Nice Picture");
-                    }
-                    break;
-
-                // request location or contact
-                case "/request":
-                    var teamNames = actions.GetTeamsAsync();
-                    teamNames.Result.Sort();
-
-                    var answer = "";
-                    foreach (var name in teamNames.Result)
-                    {
-                        answer += name + "\n";
-                    }
-
-                    await _bot.SendTextMessageAsync(
-                        message.Chat.Id, answer);
-
-                    //var RequestReplyKeyboard = new ReplyKeyboardMarkup(new[]
-                    //{
-                    //    KeyboardButton.WithRequestLocation("Location"),
-                    //    KeyboardButton.WithRequestContact("Contact"),
-                    //});
-
-                    //await _bot.SendTextMessageAsync(
-                    //    message.Chat.Id,
-                    //    "Who or Where are you?",
-                    //    replyMarkup: RequestReplyKeyboard);
-                    break;
-
-                default:
-                    const string usage = @"
-Usage:
-/inline   - send inline keyboard
-/keyboard - send custom keyboard
-/photo    - send a photo
-/request  - request location or contact";
-
-                    await _bot.SendTextMessageAsync(
-                        message.Chat.Id,
-                        usage,
-                        replyMarkup: new ReplyKeyboardRemove());
-                    break;
+                        await SendResposeMarkup("Main menu", message);
+                        break;
+                    default:
+                        //send default answer
+                        await SendTextToUser(message.Chat.Id);
+                        break;
+                }
             }
         }
 
         private async void BotOnCallbackQueryReceived(object sender, CallbackQueryEventArgs callbackQueryEventArgs)
         {
+            Console.WriteLine("BotOnCallbackQueryReceived");
+
             //Here implements actions on reciving
             var callbackQuery = callbackQueryEventArgs.CallbackQuery;
-            
-            var inlineKeyboard = GetInlineKeyboardMarkup(callbackQuery.Data);
-            if (inlineKeyboard.Text != null && inlineKeyboard.ReplyMarkup != null)
+
+            if (callbackQuery.Data == _createGithubRepo)
             {
-                await _bot.EditMessageTextAsync(
-                    callbackQuery.Message.Chat.Id, 
-                    callbackQuery.Message.MessageId,
-                    inlineKeyboard.Text, 
-                    ParseMode.Default,
-                    false,
-                    inlineKeyboard.ReplyMarkup); 
+                await SendResposeMarkup(_createGithubRepo, callbackQuery.Message);
             }
-                
-            //Send message back 
-            //await Bot.SendTextMessageAsync(
-            //    callbackQuery.Message.Chat.Id,
-            //    $"Received {callbackQuery.Data}");
+            else if (callbackQuery.Data == _chooseTeam)
+            {
+                var userName = callbackQuery.From.Username;
+                var userResult = await _actions.AddUserInTeam(userName, callbackQuery.Data);
+                if (!userResult.Success)
+                {
+                    await SendTextToUser(callbackQuery.Message.Chat.Id, userResult.Message);
+                }
+                else
+                {
+                    var repoResult =
+                        await _actions.AddRepositoryInTeam(callbackQuery.Message?.Text, "asd", Permission.Admin);
+                    if (!repoResult.Success)
+                    {
+                        await SendTextToUser(callbackQuery.Message.Chat.Id, repoResult.Message);
+                    }
+                }
+            }
         }
 
         private async void BotOnInlineQueryReceived(object sender, InlineQueryEventArgs inlineQueryEventArgs)
@@ -216,93 +207,77 @@ Usage:
                 receiveErrorEventArgs.ApiRequestException.Message);
         }
 
-        private InlineMessage GetInlineKeyboardMarkup(string callbackData)
+        private async Task SendResposeMarkup(string callbackData, Message message)
         {
             var inlineMessage = new InlineMessage();
             switch (callbackData)
             {
                 case "Main menu":
-                    inlineMessage.Text = @"This is main menu.
-Plaese, select submenu.";
-                    inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(new[]
-                     {
+                    inlineMessage.Text = "This is main menu. Please, select submenu.";
+                    var replyMarkup = new InlineKeyboardMarkup(new[]
+                    {
                         new [] // first row
                         {
-                            InlineKeyboardButton.WithCallbackData("Menu#1","Menu1"),
-                            InlineKeyboardButton.WithCallbackData("Menu#2","Menu2"),
-                        },
-                        new [] // second row
-                        {
-                            InlineKeyboardButton.WithCallbackData("Menu#3","Menu3"),
-                            InlineKeyboardButton.WithCallbackData("Menu#4","Menu4"),
+                            InlineKeyboardButton.WithCallbackData("Create Repo", _createGithubRepo),
+                            InlineKeyboardButton.WithCallbackData("Test","Test")
                         }
                     });
-                    break; 
-                case "Menu1":
-                    inlineMessage.Text = @"This is Menu #1.
-Plaese, select options.";
-                    inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(new[]
-                     {
-                        new [] // first row
-                        {
-                            InlineKeyboardButton.WithCallbackData("Menu1 Option#1","Menu1Option1"),
-                        },
-                        new [] // second row
-                        {
-                            InlineKeyboardButton.WithCallbackData("Menu1 Option#2","Menu1Option2"),
-                            InlineKeyboardButton.WithCallbackData("Back to main","Main menu"),
-                        }
-                    });
-                    break;
-                case "Menu2":
-                    inlineMessage.Text = @"This is Menu #2.
-Plaese, select options.";
-                    inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(new[]
-                     {
-                        new [] // first row
-                        {
-                            InlineKeyboardButton.WithCallbackData("Menu2 Option#1","Menu2Option1"),
-                            InlineKeyboardButton.WithCallbackData("Menu2 Option#2","Menu2Option2"),
-                        },
-                        new [] // second row
-                        {
-                            InlineKeyboardButton.WithCallbackData("Back to main","Main menu"),
-                        }
-                    });
-                    break;
-                case "Menu3":
-                    inlineMessage.Text = @"This is Menu #3.
-Plaese, select options.";
-                    inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(new[]
-                     {
-                        new [] // first row
-                        {
-                            InlineKeyboardButton.WithCallbackData("Menu3 Option#1","Menu3Option1"),
-                            InlineKeyboardButton.WithCallbackData("Menu3 Option#2","Menu3Option2"),
-                            InlineKeyboardButton.WithCallbackData("Menu3 Option#3","Menu3Option3"),
-                        },
-                        new [] // second row
-                        {
 
-                            InlineKeyboardButton.WithCallbackData("Back to main","Main menu"),
-                        }
-                    });
+                    await _bot.SendTextMessageAsync(
+                        message.Chat.Id,
+                        "This is main menu. Please, select submenu.",
+                        replyMarkup: replyMarkup);
                     break;
-                case "Menu4":
-                    inlineMessage.Text = @"This is Menu #4.
-Plaese, select options.";
-                    inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(new[]
-                     {
-                            InlineKeyboardButton.WithCallbackData("Menu4 Option#1","Menu4Option1"),
-                            InlineKeyboardButton.WithCallbackData("Menu4 Option#2","Menu4Option2"),
-                            InlineKeyboardButton.WithCallbackData("Menu4 Option#3","Menu4Option3"),
-                            InlineKeyboardButton.WithCallbackData("Back to main","Main menu"),
+                case _createGithubRepo:
+                    var maxColLength = 4;
+                    var githubTeams = await _actions.GetTeamsAsync();
+                    if (githubTeams.Any())
+                    {
+                        inlineMessage.Text = _chooseTeam;
 
+                        var inlineKeyBoardButtons = new List<List<InlineKeyboardButton>>();
+                        var buttons = new List<InlineKeyboardButton>();
+                        foreach (var team in githubTeams)
+                        {
+                            if (buttons.Count == maxColLength)
+                            {
+                                inlineKeyBoardButtons.Add(buttons.Select(x => x).ToList());
+                                buttons.RemoveRange(0, maxColLength);
+                            }
+
+                            buttons.Add(InlineKeyboardButton.WithCallbackData(team, team));
+                        }
+
+                        var keyboardMarkup = new InlineKeyboardMarkup(inlineKeyBoardButtons);
+
+                        inlineMessage.ReplyMarkup = keyboardMarkup;
+
+                        await _bot.EditMessageTextAsync(
+                            message.Chat.Id,
+                            message.MessageId,
+                            _chooseTeam,
+                            ParseMode.Default,
+                            false,
+                            keyboardMarkup);
+                    }
+                    else
+                    {
+                        await _bot.SendTextMessageAsync(message.Chat.Id, _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = false });
+                    }
+
+                    break;
+                case "Test":
+                    inlineMessage.Text = "This is Test.";
+                    inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(new[]
+                    {
+                        new [] // first row
+                        {
+                            InlineKeyboardButton.WithCallbackData("Sub_Test","Sub_Test"),
+                            InlineKeyboardButton.WithCallbackData("Back","Main menu")
+                        }
                     });
                     break;
             }
-            
-            return inlineMessage;
         }
 
         public void Start()
@@ -323,6 +298,20 @@ Plaese, select options.";
         public void Dispose()
         {
             Dispose();
-        }        
+        }
+
+        #region Private Methods
+        private async Task SendTextToUser(long chatId, string text = "")
+        {
+            const string usage = @"
+Usage:
+/inline - send inline keyboard";
+
+            await _bot.SendTextMessageAsync(
+                chatId,
+                String.IsNullOrWhiteSpace(text) ? usage : text,
+                replyMarkup: new ReplyKeyboardRemove());
+        }
+        #endregion
     }
 }
