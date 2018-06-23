@@ -18,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading.Tasks;
 using Lykke.Job.RepositoryTgBot.TelegramBot;
+using Lykke.SettingsReader.ReloadingManager;
 
 
 namespace Lykke.Job.RepositoryTgBot
@@ -64,8 +65,9 @@ namespace Lykke.Job.RepositoryTgBot
 
                 Log = CreateLogWithSlack(services, appSettings);
 
-
                 builder.RegisterModule(new JobModule(appSettings.CurrentValue.RepositoryTgBotJob, appSettings.Nested(x => x.RepositoryTgBotJob), Log));
+
+                builder.RegisterModule(new DbModule(appSettings, Log));
 
                 builder.Populate(services);
 
