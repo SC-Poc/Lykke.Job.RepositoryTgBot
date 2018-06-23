@@ -82,11 +82,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             var reference = await client.Repository.Commit.GetSha1(repositoryToEdit.Id, "master");
 
             
-
-            await client.Repository.
-
-            Console.WriteLine(reference);
-
             var branchProtSett = new BranchProtectionSettingsUpdate(new BranchProtectionPushRestrictionsUpdate(branchTeams));
             await client.Repository.Branch.UpdateBranchProtection(repositoryToEdit.Id, "master", branchProtSett);
 
