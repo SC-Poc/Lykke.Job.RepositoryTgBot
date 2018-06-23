@@ -25,7 +25,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         private readonly ILog _log;
         private readonly ITelegramBotClient _bot;
         Message oldMessage = null;
-        TelegramBotActions actions = new TelegramBotActions("LykkeCity", "470ad0b7f6e017f98f83ef5d292ad49dd9110c63");
+        TelegramBotActions actions = new TelegramBotActions("TgBotTestOrg", "04f0f3324be55345747617fafae7ab8408d32c75");
 
         public TelegramBotService(string token, ILog log)
         {
@@ -107,13 +107,13 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 // request location or contact
                 case "/request":
                     var teamNames = actions.GetTeamsAsync();
-                    teamNames.Result.Sort();
 
                     var answer = "";
                     foreach (var name in teamNames.Result)
                     {
-                        answer += name + "\n";
+                        answer += name.Name + "\n";
                     }
+                    await actions.CreateRepo(teamNames.Result[3].Id, "NewTestRepo", "This is descr", true,true);
 
                     await _bot.SendTextMessageAsync(
                         message.Chat.Id, answer);
