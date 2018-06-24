@@ -1,12 +1,14 @@
 {
   //"SecTokenPassword": "TestPwd",
-  //"Db": "DbConnStr",
+  "ConnectionString": "UseDevelopmentStorage=true",
   "RepositoryTgBotJob": {
     "Db": {
       "LogsConnString": "UseDevelopmentStorage=true"
     },
 
-    "BotToken": ""
+    "BotToken": "",
+    "GitToken": "",
+    "OrgainzationName": "TgBotTestOrg"
   },
 
   "SlackNotifications": {

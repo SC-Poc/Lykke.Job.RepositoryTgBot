@@ -52,7 +52,7 @@ namespace Lykke.Job.RepositoryTgBot.Modules
             builder.RegisterType<TelegramBotService>()
                 .As<IStartable>()
                 .As<IStopable>()
-                .WithParameter(TypedParameter.From(_settings.BotToken))
+                .WithParameter(TypedParameter.From(_settings))
                 .SingleInstance(); 
 
             // TODO: Add your dependencies here
