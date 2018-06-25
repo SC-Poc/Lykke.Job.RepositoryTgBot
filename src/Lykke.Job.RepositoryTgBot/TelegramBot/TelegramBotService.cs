@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory;
+using Lykke.Job.RepositoryTgBot.Core.Domain.TelegramBotHistory;
 using Octokit;
 using Telegram.Bot;
 using Telegram.Bot.Args;
@@ -24,10 +26,15 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
     public class TelegramBotService : IStopable, IStartable
     {
+        #region Repositories
+
+        private readonly ITelegramBotHistoryRepository _telegramBotHistoryRepository;
+
+        #endregion
         private readonly ILog _log;
         private readonly ITelegramBotClient _bot;
         Message _oldMessage = null;
-        private readonly TelegramBotActions _actions = new TelegramBotActions("TgBotTestOrg", "");
+        private readonly TelegramBotActions _actions = new TelegramBotActions("TgBotTestOrg", "f51bea6f2b417cf6adae329a14a69370c953cca7");
 
         #region Constants
         private const string _createGithubRepo = "CreateGithubRepo";
@@ -38,8 +45,10 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         private const string _questionMultipleTeams = "Is it a common service which will be used by multiple teams?";
         #endregion
 
-        public TelegramBotService(string token, ILog log)
+        public TelegramBotService(string token, ILog log, ITelegramBotHistoryRepository telegramBotHistoryRepository)
         {
+
+            _telegramBotHistoryRepository = telegramBotHistoryRepository;
 
             _log = log;
             _bot = new TelegramBotClient(token);
@@ -71,6 +80,11 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             // get repository name
             if (message.ReplyToMessage?.Text == _questionEnterName)
             {
+                //await _telegramBotHistoryRepository.SaveAsync(new TelegramBotHistory
+                //{
+                //    ChatId = message.Chat.Id,
+                //    Question = _questionEnterDesc
+                //});
                 await _bot.SendTextMessageAsync(message.Chat.Id, _questionEnterDesc, replyMarkup: new ForceReplyMarkup { Selective = false });
             }
             // get repository description
