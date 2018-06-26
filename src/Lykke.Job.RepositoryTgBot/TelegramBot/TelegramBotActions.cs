@@ -10,7 +10,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
     public class RepoToCreate
     {
         public long ChatId { get; set; }
-        public int UserId { get; set; }
+        public long UserId { get; set; }
         public int TeamId { get; set; }
         public string RepoName { get; set; }
         public string Description { get; set; }

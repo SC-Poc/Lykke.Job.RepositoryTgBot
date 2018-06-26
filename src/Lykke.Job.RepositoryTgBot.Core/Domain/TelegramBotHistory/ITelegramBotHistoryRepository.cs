@@ -10,6 +10,8 @@ namespace Lykke.Job.RepositoryTgBot.Core.Domain.TelegramBotHistory
 
         Task<IEnumerable<ITelegramBotHistory>> GetAllAsync(Func<ITelegramBotHistory, bool> filter = null);
 
+        Task<ITelegramBotHistory> GetLatestAsync(Func<ITelegramBotHistory, bool> filter = null);
+
         Task<bool> SaveAsync(ITelegramBotHistory entity);
 
         Task RemoveAsync(string telegramBotHistoryId);

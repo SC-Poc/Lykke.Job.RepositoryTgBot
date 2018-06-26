@@ -38,17 +38,19 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         private static readonly List<RepoToCreate> RepoToCreateList = new List<RepoToCreate>();
 
         #region Constants
+
+        private const string _mainMenu = "This is main menu. Please, select submenu.";
         private const string _createGithubRepo = "CreateGithubRepo";
         private const string _questionAssignToGit = "Do you assigned to some GitHub team?";
-        private const string _chooseTeam = "What is your team?"; 
-        private const string _chooseAssignedTeam = "For which team do you want to create a repository?"; 
+        private const string _chooseTeam = "What is your team?";
+        private const string _chooseAssignedTeam = "For which team do you want to create a repository?";
         private const string _questionEnterName = "Enter repository name";
         private const string _questionEnterDesc = "Enter repository description";
         private const string _questionSecurity = "Will service interact with sensitive data, finance operations or includes other security risks?";
         private const string _questionMultipleTeams = "Is it a common service which will be used by multiple teams?";
         #endregion
 
-        public TelegramBotService(RepositoryTgBotSettings settings, ILog log)
+        public TelegramBotService(RepositoryTgBotSettings settings, ILog log, ITelegramBotHistoryRepository telegramBotHistoryRepository)
         {
 
             _telegramBotHistoryRepository = telegramBotHistoryRepository;
@@ -74,51 +76,40 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             // get repository name
             if (message.ReplyToMessage?.Text == _questionEnterName)
             {
-                var repoToCreate = GetOrCreateRepo(message);
-                repoToCreate.RepoName = message.Text;
-                Console.WriteLine(" 1 - " + repoToCreate.RepoName + " 2 - " + message.Text + " 3 - " + message.Chat.Id + " 4 - " + message.From.Id);
                 await _bot.SendTextMessageAsync(message.Chat.Id, _questionEnterDesc, replyMarkup: new ForceReplyMarkup { Selective = false });
+                await CreateBotHistory(message.Chat.Id, message.From.Id, message.From.Username, _questionEnterDesc, message.Text);
             }
 
             // get repository description
             else if (message.ReplyToMessage?.Text == _questionEnterDesc)
             {
-                var repoToCreate = await GetIfExistRepoAsync(message);
-                if (repoToCreate != null)
+                var inlineMessage = new InlineMessage
                 {
-                    repoToCreate.Description = message.Text;
+                    Text = _questionSecurity,
+                    ReplyMarkup = new InlineKeyboardMarkup(new[]
+                        {
+                            new[] // first row
+                            {
+                                InlineKeyboardButton.WithCallbackData("Yes", "Security"),
+                                InlineKeyboardButton.WithCallbackData("No", "NoSecurity")
+                            }
+                        })
+                };
 
-                    var inlineMessage = new InlineMessage();
-                    inlineMessage.Text = _questionSecurity;
-                    inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(new[]
-                    {
-                    new [] // first row
-                    {
-                        InlineKeyboardButton.WithCallbackData("Yes", "Security"),
-                        InlineKeyboardButton.WithCallbackData("No", "NoSecurity")
-                    }
-                });
-
-                    await _bot.SendTextMessageAsync(
-                        message.Chat.Id,
-                        inlineMessage.Text,
-                        replyMarkup: inlineMessage.ReplyMarkup);
-                }
-                
+                await _bot.SendTextMessageAsync(message.Chat.Id, inlineMessage.Text, replyMarkup: inlineMessage.ReplyMarkup);
+                await CreateBotHistory(message.Chat.Id, message.From.Id, message.From.Username, _questionSecurity, message.Text);
             }
 
             // read commands
             else
             {
-                RemoveRepoToCreate(message);
-
                 switch (message.Text.Split(' ').First())
                 {
                     // send inline menu keyboard
-                    case "/menu":                        
+                    case "/menu":
 
                         var inlineMessage = new InlineMessage();
-                        inlineMessage.Text = "This is main menu. Please, select submenu.";
+                        inlineMessage.Text = _mainMenu;
                         inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(new[]
                         {
                             new [] // first row
@@ -128,10 +119,17 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                             }
                         });
 
-                        await _bot.SendTextMessageAsync(
-                        message.Chat.Id,
-                        inlineMessage.Text,
-                        replyMarkup: inlineMessage.ReplyMarkup);
+                        await _bot.SendTextMessageAsync(message.Chat.Id, inlineMessage.Text, replyMarkup: inlineMessage.ReplyMarkup);
+                        var botHistory = new TelegramBotHistory
+                        {
+                            RowKey = Guid.NewGuid().ToString(),
+                            ChatId = message.Chat.Id,
+                            UserId = message.From.Id,
+                            TelegramUserName = message.From.Username,
+                            Question = _mainMenu
+                        };
+
+                        await _telegramBotHistoryRepository.SaveAsync(botHistory);
                         break;
                     default:
                         //send default answer
@@ -142,31 +140,29 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         }
 
         private async void BotOnCallbackQueryReceived(object sender, CallbackQueryEventArgs callbackQueryEventArgs)
-        { 
+        {
             //Here implements actions on reciving
             var callbackQuery = callbackQueryEventArgs.CallbackQuery;
 
             if (callbackQuery.Message.Text == _chooseTeam)
             {
-                var repoToCreate = await GetIfExistRepoAsync(callbackQuery.Message);
-                if (repoToCreate != null)
+                var userName = callbackQuery.From.Username;
+                var userResult = await _actions.AddUserInTeam(userName, Convert.ToInt32(callbackQuery.Data));
+                if (!userResult.Success)
                 {
-                    repoToCreate.TeamId = Convert.ToInt32(callbackQuery.Data);
-                    var userName = callbackQuery.From.Username;
-                    var userResult = await _actions.AddUserInTeam(userName, Convert.ToInt32(callbackQuery.Data));
-                    if (!userResult.Success)
-                    {
-                        await SendTextToUser(callbackQuery.Message.Chat.Id, userResult.Message);
-                    }
-                    
-                    await _bot.SendTextMessageAsync(callbackQuery.Message.Chat.Id, _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = false });
-                }                
+                    await SendTextToUser(callbackQuery.Message.Chat.Id, userResult.Message);
+                }
+
+                var message = callbackQuery.Message;
+
+                await _bot.SendTextMessageAsync(callbackQuery.Message.Chat.Id, _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = false });
+                await CreateBotHistory(message.Chat.Id, callbackQuery.From.Id, callbackQuery.From.Username, _questionEnterName, callbackQuery.Data);
             }
             else
             {
-                await SendResponseMarkup(callbackQuery.Data, callbackQuery.Message);
+                await SendResponseMarkup(callbackQuery, callbackQuery.Message);
             }
-            
+
         }
 
         private void BotOnReceiveError(object sender, ReceiveErrorEventArgs receiveErrorEventArgs)
@@ -176,50 +172,26 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 receiveErrorEventArgs.ApiRequestException.Message);
         }
 
-        private async Task SendResponseMarkup(string callbackData, Message message)
+        private async Task SendResponseMarkup(CallbackQuery callbackQuery, Message message)
         {
             var inlineMessage = new InlineMessage();
-            switch (callbackData)
+            var question = String.Empty;
+            switch (callbackQuery.Data)
             {
-                case "Main menu":
-                    inlineMessage.Text = "This is main menu. Please, select submenu.";
-                    inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(new[]
-                    {
-                        new [] // first row
-                        {
-                            InlineKeyboardButton.WithCallbackData("Create Repo", _createGithubRepo),
-                            InlineKeyboardButton.WithCallbackData("Test","Test")
-                        }
-                    });                    
-                    await _bot.EditMessageTextAsync(
-                            message.Chat.Id,
-                            message.MessageId,
-                            inlineMessage.Text,
-                            ParseMode.Default,
-                            false,
-                            inlineMessage.ReplyMarkup);
-                    break;
                 case _createGithubRepo:
-
-                    //creating instance of RepoToCreate
-                    var repoToCreate = GetOrCreateRepo(message);
-
                     inlineMessage.Text = _questionAssignToGit;
+                    question = _questionAssignToGit;
                     inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(new[]
                     {
                         new [] // first row
                         {
-                            InlineKeyboardButton.WithCallbackData("Yes", _questionEnterName), 
+                            InlineKeyboardButton.WithCallbackData("Yes", _questionEnterName),
                             InlineKeyboardButton.WithCallbackData("No",_questionAssignToGit)
                         }
                     });
-                    await _bot.EditMessageTextAsync(
-                            message.Chat.Id,
-                            message.MessageId,
-                            inlineMessage.Text,
-                            ParseMode.Default,
-                            false,
-                            inlineMessage.ReplyMarkup);
+                    await _bot.EditMessageTextAsync(message.Chat.Id, message.MessageId, inlineMessage.Text, ParseMode.Default,
+                            false, inlineMessage.ReplyMarkup);
+
                     break;
                 case _chooseAssignedTeam:
                 case _questionAssignToGit:
@@ -228,7 +200,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                     if (githubTeams.Any())
                     {
                         inlineMessage.Text = _chooseTeam;
-
+                        question = _chooseTeam;
                         var inlineKeyBoardButtons = new List<List<InlineKeyboardButton>>();
                         var buttons = new List<InlineKeyboardButton>();
                         foreach (var team in githubTeams)
@@ -247,48 +219,21 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
                         inlineMessage.ReplyMarkup = keyboardMarkup;
 
-                        await _bot.EditMessageTextAsync(
-                            message.Chat.Id,
-                            message.MessageId,
-                            inlineMessage.Text,
-                            ParseMode.Default,
-                            false,
-                            inlineMessage.ReplyMarkup);
+                        await _bot.EditMessageTextAsync(message.Chat.Id, message.MessageId, inlineMessage.Text, ParseMode.Default,
+                            false, inlineMessage.ReplyMarkup);
                     }
                     break;
-                case _questionEnterName:                    
-                        await _bot.SendTextMessageAsync(message.Chat.Id, _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = false });                   
+                case _questionEnterName:
+                    question = _questionEnterName;
+                    await _bot.SendTextMessageAsync(message.Chat.Id, _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = false });
 
-                    break;
-                case "Test":
-                    inlineMessage.Text = "This is Test.";
-                    inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(new[]
-                    {
-                        new [] // first row
-                        {
-                            InlineKeyboardButton.WithCallbackData("Sub_Test","Sub_Test"),
-                            InlineKeyboardButton.WithCallbackData("Back","Main menu")
-                        }
-                    });
-                    await _bot.EditMessageTextAsync(
-                            message.Chat.Id,
-                            message.MessageId,
-                            inlineMessage.Text,
-                            ParseMode.Default,
-                            false,
-                            inlineMessage.ReplyMarkup);
                     break;
                 case "Security":
                 case "NoSecurity":
-                    repoToCreate = await GetIfExistRepoAsync(message);
-
-                    if (repoToCreate != null)
+                    inlineMessage.Text = _questionMultipleTeams;
+                    question = _questionMultipleTeams;
+                    inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(new[]
                     {
-                        repoToCreate.AddSecurityTeam = callbackData == "Security";
-
-                        inlineMessage.Text = _questionMultipleTeams;
-                        inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(new[]
-                        {
                             new [] // first row
                             {
                                 InlineKeyboardButton.WithCallbackData("Yes", "Core"),
@@ -296,38 +241,28 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                             }
                         });
 
-                        await _bot.EditMessageTextAsync(
-                                message.Chat.Id,
-                                message.MessageId,
-                                inlineMessage.Text,
-                                ParseMode.Default,
-                                false,
-                                inlineMessage.ReplyMarkup);
-                    }                        
+                    await _bot.EditMessageTextAsync(message.Chat.Id, message.MessageId, inlineMessage.Text, ParseMode.Default,
+                            false, inlineMessage.ReplyMarkup);
                     break;
                 case "Core":
                 case "NoCore":
-                    repoToCreate = await GetIfExistRepoAsync(message);
-                    if (repoToCreate != null)
-                    {
-                        repoToCreate.AddCoreTeam = callbackData == "Core";
+                    var repoToCreate = await GetRepoToCreate(message.Chat.Id, callbackQuery.From.Id);
+                    var result = await _actions.CreateRepo(repoToCreate);
+                    question = result.Message;
+                    await SendTextToUser(message.Chat.Id, result.Message);
+                    Console.WriteLine($"CreatingRepo! \n " +
+                        $"repoToCreate.AddCoreTeam: {repoToCreate.AddCoreTeam} \n " +
+                        $"repoToCreate.AddSecurityTeam: {repoToCreate.AddSecurityTeam} \n " +
+                        $"repoToCreate.ChatId: {repoToCreate.ChatId} \n " +
+                        $"repoToCreate.Description: {repoToCreate.Description} \n " +
+                        $"repoToCreate.RepoName: {repoToCreate.RepoName} \n " +
+                        $"repoToCreate.TeamId: {repoToCreate.TeamId} \n " +
+                        $"repoToCreate.UserId: {repoToCreate.UserId} ");
 
-                        var result = await _actions.CreateRepo(repoToCreate);
-                        await SendTextToUser(message.Chat.Id, result.Message);
-                        Console.WriteLine($"CreatingRepo! \n " +
-                            $"repoToCreate.AddCoreTeam: {repoToCreate.AddCoreTeam} \n " +
-                            $"repoToCreate.AddSecurityTeam: {repoToCreate.AddSecurityTeam} \n " +
-                            $"repoToCreate.ChatId: {repoToCreate.ChatId} \n " +
-                            $"repoToCreate.Description: {repoToCreate.Description} \n " +
-                            $"repoToCreate.RepoName: {repoToCreate.RepoName} \n " +
-                            $"repoToCreate.TeamId: {repoToCreate.TeamId} \n " +
-                            $"repoToCreate.UserId: {repoToCreate.UserId} ");
-
-                        RemoveRepoToCreate(message);
-                    }
-                    
                     break;
             }
+
+            await CreateBotHistory(message.Chat.Id, callbackQuery.From.Id, callbackQuery.From.Username, question, callbackQuery.Data);
         }
 
         public void Start()
@@ -363,33 +298,79 @@ Usage:
                 replyMarkup: new ReplyKeyboardRemove());
         }
 
-        private RepoToCreate GetOrCreateRepo(Message message)
+        private async Task<bool> CreateBotHistory(long chatId, long userId, string telegramUserName, string question, string answer = null)
         {
-            var repo = RepoToCreateList.FirstOrDefault(r => (r.ChatId == message.Chat.Id ));
-            if (repo == null)
+            var entity = new TelegramBotHistory
             {
-                repo = new RepoToCreate() { ChatId = message.Chat.Id, UserId = message.From.Id };
-                RepoToCreateList.Add(repo);
+                RowKey = Guid.NewGuid().ToString(),
+                ChatId = chatId,
+                UserId = userId,
+                TelegramUserName = telegramUserName,
+                Question = question
+            };
+
+            try
+            {
+                // first of all, we need to add answer for previous question
+                if (!String.IsNullOrWhiteSpace(answer))
+                {
+                    var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == entity.ChatId && x.UserId == entity.UserId);
+                    if (prevQuestion != null)
+                    {
+                        prevQuestion.Answer = answer;
+                        await _telegramBotHistoryRepository.SaveAsync(prevQuestion);
+                    }
+                }
+
+                // add current question
+                await _telegramBotHistoryRepository.SaveAsync(entity);
+
+                return true;
             }
-            return repo;
+            catch (Exception ex)
+            {
+                return false;
+            }
         }
 
-        private async Task<RepoToCreate> GetIfExistRepoAsync(Message message)
+        private async Task<RepoToCreate> GetRepoToCreate(long chatId, long userId)
         {
-            var repo = RepoToCreateList.FirstOrDefault(r => (r.ChatId == message.Chat.Id ));
-            if (repo == null)
+            var repoToCreate = new RepoToCreate
             {
-                await SendTextToUser(message.Chat.Id);
-            }
-            return repo;
-        }
-        private static void RemoveRepoToCreate(Message message)
-        {
-            var repo = RepoToCreateList.FirstOrDefault(r => (r.ChatId == message.Chat.Id ));
-            if (repo == null)
+                ChatId = chatId,
+                UserId = userId
+            };
+
+            var questionsToAnswer = new[] { _chooseTeam, _questionEnterName, _questionEnterDesc, _questionSecurity, _questionMultipleTeams };
+            foreach (var question in questionsToAnswer)
             {
-                RepoToCreateList.Remove(repo);
+                // TODO: get all data for current user and update repoToCreate
+                var history = await _telegramBotHistoryRepository.GetLatestAsync(x => x.Question == question);
+                if (history == null) continue;
+
+                var answer = history.Answer;
+
+                switch (question)
+                {
+                    case _chooseTeam:
+                        repoToCreate.TeamId = Convert.ToInt32(answer);
+                        break;
+                    case _questionEnterName:
+                        repoToCreate.RepoName = answer;
+                        break;
+                    case _questionEnterDesc:
+                        repoToCreate.Description = answer;
+                        break;
+                    case _questionSecurity:
+                        repoToCreate.AddSecurityTeam = answer == "Security";
+                        break;
+                    case _questionMultipleTeams:
+                        repoToCreate.AddCoreTeam = answer == "Core";
+                        break;
+                }
             }
+
+            return repoToCreate;
         }
         #endregion
     }
