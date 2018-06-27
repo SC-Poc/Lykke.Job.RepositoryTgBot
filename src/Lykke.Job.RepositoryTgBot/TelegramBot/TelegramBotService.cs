@@ -1,21 +1,18 @@
 ﻿using Autofac;
 using Common;
 using Common.Log;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory;
 using Lykke.Job.RepositoryTgBot.Core.Domain.TelegramBotHistory;
-using Octokit;
+using Lykke.Job.RepositoryTgBot.Settings.JobSettings;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Args;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.InlineQueryResults;
 using Telegram.Bot.Types.ReplyMarkups;
-using Lykke.Job.RepositoryTgBot.Settings.JobSettings;
 
 namespace Lykke.Job.RepositoryTgBot.TelegramBot
 {
@@ -41,7 +38,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         private const string _mainMenu = "This is main menu. Please, select submenu.";
         private const string _createGithubRepo = "CreateGithubRepo";
         private const string _questionAssignToGit = "Do you assigned to some GitHub team?";
-        private const string _chooseTeam = "What is your team?"; 
+        private const string _chooseTeam = "What is your team?";
         private const string _questionEnterName = "Enter repository name";
         private const string _questionEnterDesc = "Enter repository description";
         private const string _questionSecurity = "Will service interact with sensitive data, finance operations or includes other security risks?";
@@ -153,9 +150,11 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 {
                     await SendTextToUser(callbackQuery.Message.Chat.Id, userResult.Message);
                 }
-                    
+
+                var message = callbackQuery.Message;
+
                 await _bot.SendTextMessageAsync(callbackQuery.Message.Chat.Id, _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = false });
-               
+                await CreateBotHistory(message.Chat.Id, callbackQuery.From.Id, callbackQuery.From.Username, _questionEnterName, callbackQuery.Data);
             }
             else
             {
@@ -194,7 +193,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                         if (githubTeams.Any())
                         {
                             inlineMessage.Text = _chooseTeam;
-
+                            question = _chooseTeam;
                             var inlineKeyBoardButtons = new List<List<InlineKeyboardButton>>();
                             var buttons = new List<InlineKeyboardButton>();
                             foreach (var team in githubTeams)
@@ -213,15 +212,10 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
                             inlineMessage.ReplyMarkup = keyboardMarkup;
 
-                            await _bot.EditMessageTextAsync(
-                                message.Chat.Id,
-                                message.MessageId,
-                                inlineMessage.Text,
-                                ParseMode.Default,
-                                false,
-                                inlineMessage.ReplyMarkup);
+                            await _bot.EditMessageTextAsync(message.Chat.Id, message.MessageId, inlineMessage.Text, ParseMode.Default,
+                                false, inlineMessage.ReplyMarkup);
                         }
-                        
+
                     }
                     break;
                 case _questionEnterName:
