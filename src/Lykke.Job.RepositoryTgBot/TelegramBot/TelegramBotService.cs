@@ -145,22 +145,18 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
             if (callbackQuery.Message.Text == _chooseTeam)
             {
-                var repoToCreate = await GetIfExistRepoAsync(callbackQuery.Message);
-                if (repoToCreate != null)
-                {
-                    //TODO: Save users TeamId to AzureTable
-                    //await SaveUserTeamId(Convert.ToInt32(callbackQuery.Data, callbackQuery.Message.Chat.Id, callbackQuery.Message.From.Id); 
+                //TODO: Save users TeamId to AzureTable
+                //await SaveUserTeamId(Convert.ToInt32(callbackQuery.Data, callbackQuery.Message.Chat.Id, callbackQuery.Message.From.Id); 
 
-                    repoToCreate.TeamId = Convert.ToInt32(callbackQuery.Data);
-                    var userName = callbackQuery.From.Username;
-                    var userResult = await _actions.AddUserInTeam(userName, Convert.ToInt32(callbackQuery.Data));
-                    if (!userResult.Success)
-                    {
-                        await SendTextToUser(callbackQuery.Message.Chat.Id, userResult.Message);
-                    }
+                var userName = callbackQuery.From.Username;
+                var userResult = await _actions.AddUserInTeam(userName, Convert.ToInt32(callbackQuery.Data));
+                if (!userResult.Success)
+                {
+                    await SendTextToUser(callbackQuery.Message.Chat.Id, userResult.Message);
+                }
                     
-                    await _bot.SendTextMessageAsync(callbackQuery.Message.Chat.Id, _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = false });
-                }                
+                await _bot.SendTextMessageAsync(callbackQuery.Message.Chat.Id, _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = false });
+               
             }
             else
             {
@@ -184,16 +180,12 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             {
                 case _createGithubRepo:
 
-                    //creating instance of RepoToCreate
-                    var repoToCreate = GetOrCreateRepo(message);
-
                     //Getting userTeamId
                     int userTeamId = 0;
                     //var userTeamId = GetUserTeamId(message.Chat.Id, message.From.Id);
 
                     if(userTeamId != 0)
                     {
-                        repoToCreate.TeamId = userTeamId;
                         await _bot.SendTextMessageAsync(message.Chat.Id, _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = false });
                     }
                     else
