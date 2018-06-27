@@ -34,7 +34,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         private const string _createGithubRepo = "CreateGithubRepo";
         private const string _questionAssignToGit = "Do you assigned to some GitHub team?";
         private const string _chooseTeam = "What is your team?"; 
-        private const string _chooseAssignedTeam = "For which team do you want to create a repository?"; 
         private const string _questionEnterName = "Enter repository name";
         private const string _questionEnterDesc = "Enter repository description";
         private const string _questionSecurity = "Will service interact with sensitive data, finance operations or includes other security risks?";
@@ -142,6 +141,9 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 var repoToCreate = await GetIfExistRepoAsync(callbackQuery.Message);
                 if (repoToCreate != null)
                 {
+                    //TODO: Save users TeamId to AzureTable
+                    //await SaveUserTeamId(Convert.ToInt32(callbackQuery.Data, callbackQuery.Message.Chat.Id, callbackQuery.Message.From.Id); 
+
                     repoToCreate.TeamId = Convert.ToInt32(callbackQuery.Data);
                     var userName = callbackQuery.From.Username;
                     var userResult = await _actions.AddUserInTeam(userName, Convert.ToInt32(callbackQuery.Data));
@@ -195,56 +197,50 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                     //creating instance of RepoToCreate
                     var repoToCreate = GetOrCreateRepo(message);
 
-                    inlineMessage.Text = _questionAssignToGit;
-                    inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(new[]
-                    {
-                        new [] // first row
-                        {
-                            InlineKeyboardButton.WithCallbackData("Yes", _questionEnterName), 
-                            InlineKeyboardButton.WithCallbackData("No",_questionAssignToGit)
-                        }
-                    });
-                    await _bot.EditMessageTextAsync(
-                            message.Chat.Id,
-                            message.MessageId,
-                            inlineMessage.Text,
-                            ParseMode.Default,
-                            false,
-                            inlineMessage.ReplyMarkup);
-                    break;
-                case _chooseAssignedTeam:
-                case _questionAssignToGit:
-                    var maxRowLength = 2;
-                    var githubTeams = await _actions.GetTeamsAsync();
-                    if (githubTeams.Any())
-                    {
-                        inlineMessage.Text = _chooseTeam;
+                    //Getting userTeamId
+                    int userTeamId = 0;
+                    //var userTeamId = GetUserTeamId(message.Chat.Id, message.From.Id);
 
-                        var inlineKeyBoardButtons = new List<List<InlineKeyboardButton>>();
-                        var buttons = new List<InlineKeyboardButton>();
-                        foreach (var team in githubTeams)
+                    if(userTeamId != 0)
+                    {
+                        repoToCreate.TeamId = userTeamId;
+                        await _bot.SendTextMessageAsync(message.Chat.Id, _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = false });
+                    }
+                    else
+                    {
+                        var maxRowLength = 2;
+                        var githubTeams = await _actions.GetTeamsAsync();
+                        if (githubTeams.Any())
                         {
-                            if (buttons.Count == maxRowLength)
+                            inlineMessage.Text = _chooseTeam;
+
+                            var inlineKeyBoardButtons = new List<List<InlineKeyboardButton>>();
+                            var buttons = new List<InlineKeyboardButton>();
+                            foreach (var team in githubTeams)
                             {
-                                inlineKeyBoardButtons.Add(buttons.Select(x => x).ToList());
-                                buttons.RemoveRange(0, maxRowLength);
+                                if (buttons.Count == maxRowLength)
+                                {
+                                    inlineKeyBoardButtons.Add(buttons.Select(x => x).ToList());
+                                    buttons.RemoveRange(0, maxRowLength);
+                                }
+
+                                buttons.Add(InlineKeyboardButton.WithCallbackData(team.Name, team.Id.ToString()));
                             }
+                            inlineKeyBoardButtons.Add(buttons);
 
-                            buttons.Add(InlineKeyboardButton.WithCallbackData(team.Name, team.Id.ToString()));
+                            var keyboardMarkup = new InlineKeyboardMarkup(inlineKeyBoardButtons);
+
+                            inlineMessage.ReplyMarkup = keyboardMarkup;
+
+                            await _bot.EditMessageTextAsync(
+                                message.Chat.Id,
+                                message.MessageId,
+                                inlineMessage.Text,
+                                ParseMode.Default,
+                                false,
+                                inlineMessage.ReplyMarkup);
                         }
-                        inlineKeyBoardButtons.Add(buttons);
-
-                        var keyboardMarkup = new InlineKeyboardMarkup(inlineKeyBoardButtons);
-
-                        inlineMessage.ReplyMarkup = keyboardMarkup;
-
-                        await _bot.EditMessageTextAsync(
-                            message.Chat.Id,
-                            message.MessageId,
-                            inlineMessage.Text,
-                            ParseMode.Default,
-                            false,
-                            inlineMessage.ReplyMarkup);
+                        
                     }
                     break;
                 case _questionEnterName:                    
