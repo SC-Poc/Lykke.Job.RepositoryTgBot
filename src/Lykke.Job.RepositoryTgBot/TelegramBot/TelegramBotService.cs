@@ -161,8 +161,8 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == callbackQuery.Message.Chat.Id && x.UserId == callbackQuery.From.Id);
                 if (prevQuestion != null && prevQuestion.Question == _chooseTeam)
                 {
-                    //TODO: Save users TeamId to AzureTable
-                    //await SaveUserTeamId(Convert.ToInt32(callbackQuery.Data, callbackQuery.Message.Chat.Id, callbackQuery.Message.From.Id); 
+                    
+                    await SaveUserTeamId(Convert.ToInt32(callbackQuery.Data), callbackQuery.Message.Chat.Id, callbackQuery.From.Id); 
 
                     var userName = callbackQuery.From.Username;
                     var userResult = await _actions.AddUserInTeam(userName, Convert.ToInt32(callbackQuery.Data));
@@ -204,8 +204,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 case _createGithubRepo:
 
                     //Getting userTeamId
-                    int userTeamId = 0;
-                    //var userTeamId = GetUserTeamId(message.Chat.Id, message.From.Id);
+                    var userTeamId = await GetUserTeamId(message.Chat.Id, callbackQuery.From.Id);
 
                     if(userTeamId != 0)
                     {
@@ -405,6 +404,19 @@ Usage:
             }
 
             return repoToCreate;
+        }
+
+        private async Task SaveUserTeamId(int teamId, long chatId, long userId)
+        {
+            var entity = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == chatId && x.UserId == userId);
+            if (entity != null)
+                entity.TeamId = teamId;
+        }
+
+        private async Task<int> GetUserTeamId(long chatId, long userId)
+        {
+            var entity = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == chatId && x.UserId == userId);
+            return entity?.TeamId ?? 0;
         }
         #endregion
     }
