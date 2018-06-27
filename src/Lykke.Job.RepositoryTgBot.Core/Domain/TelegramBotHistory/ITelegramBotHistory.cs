@@ -6,8 +6,6 @@
 
         long UserId { get; set; }
 
-        int TeamId { get; set; }
-
         string TelegramUserName { get; set; }
 
         string GithubUserName { get; set; }

@@ -16,8 +16,6 @@ namespace Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory
 
         public long UserId { get; set; }
 
-        public int TeamId { get; set; }
-
         public string TelegramUserName { get; set; }
 
         public string GithubUserName { get; set; }

@@ -127,7 +127,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                             new [] // first row
                             {
                                 InlineKeyboardButton.WithCallbackData("Create Repo", _createGithubRepo),
-                                InlineKeyboardButton.WithCallbackData("Test","Test")
+                                //InlineKeyboardButton.WithCallbackData("Test","Test")
                             }
                         });
 
@@ -159,11 +159,8 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             if (callbackQuery.Message.Text == _chooseTeam)
             {
                 var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == callbackQuery.Message.Chat.Id && x.UserId == callbackQuery.From.Id);
-                if (prevQuestion != null && prevQuestion.Question == _chooseTeam)
+                if (prevQuestion == null || prevQuestion.Question == _chooseTeam)
                 {
-                    
-                    await SaveUserTeamId(Convert.ToInt32(callbackQuery.Data), callbackQuery.Message.Chat.Id, callbackQuery.From.Id); 
-
                     var userName = callbackQuery.From.Username;
                     var userResult = await _actions.AddUserInTeam(userName, Convert.ToInt32(callbackQuery.Data));
                     if (!userResult.Success)
@@ -199,6 +196,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         {
             var inlineMessage = new InlineMessage();
             var question = String.Empty;
+
             switch (callbackQuery.Data)
             {
                 case _createGithubRepo:
@@ -208,6 +206,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
                     if(userTeamId != 0)
                     {
+                        question = _questionEnterName;
                         await _bot.SendTextMessageAsync(message.Chat.Id, _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = false });
                     }
                     else
@@ -250,9 +249,11 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                     break;
                 case "Security":
                 case "NoSecurity":
-                    var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == message.Chat.Id && x.UserId == message.From.Id);
-                    if (prevQuestion != null && prevQuestion.Question == _questionSecurity)
+                    var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == message.Chat.Id && x.UserId == callbackQuery.From.Id);
+                    
+                    if (prevQuestion == null || prevQuestion.Question != _questionSecurity)
                     {
+                        Console.WriteLine(prevQuestion.Question);
                         await SendTextToUser(message.Chat.Id);
                         break;
                     }
@@ -272,12 +273,14 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                     break;
                 case "Core":
                 case "NoCore":
-                    prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == message.Chat.Id && x.UserId == message.From.Id);
-                    if (prevQuestion != null && prevQuestion.Question == _questionMultipleTeams)
+                    prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == message.Chat.Id && x.UserId == callbackQuery.From.Id);
+                    if (prevQuestion == null || prevQuestion.Question != _questionMultipleTeams)
                     {
                         await SendTextToUser(message.Chat.Id);
                         break;
                     }
+                    prevQuestion.Answer = callbackQuery.Data;
+                    await _telegramBotHistoryRepository.SaveAsync(prevQuestion);
 
                     var repoToCreate = await GetRepoToCreate(message.Chat.Id, callbackQuery.From.Id);
                     var result = await _actions.CreateRepo(repoToCreate);
@@ -406,17 +409,10 @@ Usage:
             return repoToCreate;
         }
 
-        private async Task SaveUserTeamId(int teamId, long chatId, long userId)
-        {
-            var entity = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == chatId && x.UserId == userId);
-            if (entity != null)
-                entity.TeamId = teamId;
-        }
-
         private async Task<int> GetUserTeamId(long chatId, long userId)
         {
-            var entity = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == chatId && x.UserId == userId);
-            return entity?.TeamId ?? 0;
+            var entity = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == chatId && x.UserId == userId && x.Question == _chooseTeam);
+            return entity?.Answer.ParseIntOrDefault(0) ?? 0;
         }
         #endregion
     }
