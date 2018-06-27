@@ -35,7 +35,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         private readonly ILog _log;
         private readonly ITelegramBotClient _bot;
         private readonly TelegramBotActions _actions;
-        private static readonly List<RepoToCreate> RepoToCreateList = new List<RepoToCreate>();
 
         #region Constants
 
