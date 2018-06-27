@@ -6,5 +6,8 @@ namespace Lykke.Job.RepositoryTgBot.Settings.JobSettings
     {
         [AzureTableCheck]
         public string LogsConnString { get; set; }
+
+        [AzureTableCheck]
+        public string ConnectionString { get; set; }
     }
 }

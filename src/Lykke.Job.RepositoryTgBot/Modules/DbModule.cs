@@ -24,7 +24,7 @@ namespace Lykke.Job.RepositoryTgBot.Modules
 
         protected override void Load(ContainerBuilder builder)
         {
-            var connectionString = _settings.ConnectionString(x => x.ConnectionString);
+            var connectionString = _settings.ConnectionString(x => x.RepositoryTgBotJob.Db.ConnectionString);
 
             builder.RegisterInstance(
                 new TelegramBotHistoryRepository(AzureTableStorage<TelegramBotHistory>.Create(connectionString, "TelegramBotHistory", _log))
