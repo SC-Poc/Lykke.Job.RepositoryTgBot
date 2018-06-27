@@ -9,7 +9,6 @@ using Lykke.Job.RepositoryTgBot.Core.Services;
 using Lykke.Job.RepositoryTgBot.Modules;
 using Lykke.Job.RepositoryTgBot.Settings;
 using Lykke.Logs;
-using Lykke.MonitoringServiceApiCaller;
 using Lykke.SettingsReader;
 using Lykke.SlackNotification.AzureQueue;
 using Microsoft.AspNetCore.Builder;
@@ -18,6 +17,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading.Tasks;
+using Lykke.Job.RepositoryTgBot.TelegramBot;
+using Lykke.SettingsReader.ReloadingManager;
+using Lykke.MonitoringServiceApiCaller;
 
 namespace Lykke.Job.RepositoryTgBot
 {
@@ -59,7 +61,7 @@ namespace Lykke.Job.RepositoryTgBot
                 var builder = new ContainerBuilder();
                 var appSettings = Configuration.LoadSettings<AppSettings>();
                 if (appSettings.CurrentValue.MonitoringServiceClient != null)
-                   _monitoringServiceUrl = appSettings.CurrentValue.MonitoringServiceClient.MonitoringServiceUrl;
+                    _monitoringServiceUrl = appSettings.CurrentValue.MonitoringServiceClient.MonitoringServiceUrl;
 
                 Log = CreateLogWithSlack(services, appSettings);
 

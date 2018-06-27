@@ -1,9 +1,10 @@
 {
   //"SecTokenPassword": "TestPwd",
-  "ConnectionString": "UseDevelopmentStorage=true",
+  
   "RepositoryTgBotJob": {
     "Db": {
-      "LogsConnString": "UseDevelopmentStorage=true"
+      "LogsConnString": "UseDevelopmentStorage=true",
+      "ConnectionString": "UseDevelopmentStorage=true"
     },
 
     "BotToken": "",

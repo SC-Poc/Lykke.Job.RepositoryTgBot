@@ -44,7 +44,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         private const string _questionMultipleTeams = "Is it a common service which will be used by multiple teams?";
         #endregion
 
-        public TelegramBotService(RepositoryTgBotSettings settings, ILog log, ITelegramBotHistoryRepository telegramBotHistoryRepository)
+        public TelegramBotService(RepositoryTgBotJobSettings settings, ILog log, ITelegramBotHistoryRepository telegramBotHistoryRepository)
         {
 
             _telegramBotHistoryRepository = telegramBotHistoryRepository;

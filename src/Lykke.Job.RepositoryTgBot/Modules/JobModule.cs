@@ -13,13 +13,13 @@ namespace Lykke.Job.RepositoryTgBot.Modules
 {
     public class JobModule : Module
     {
-        private readonly RepositoryTgBotSettings _settings;
-        private readonly IReloadingManager<RepositoryTgBotSettings> _settingsManager;
+        private readonly RepositoryTgBotJobSettings _settings;
+        private readonly IReloadingManager<RepositoryTgBotJobSettings> _settingsManager;
         private readonly ILog _log;
         // NOTE: you can remove it if you don't need to use IServiceCollection extensions to register service specific dependencies
         private readonly IServiceCollection _services;
 
-        public JobModule(RepositoryTgBotSettings settings, IReloadingManager<RepositoryTgBotSettings> settingsManager, ILog log)
+        public JobModule(RepositoryTgBotJobSettings settings, IReloadingManager<RepositoryTgBotJobSettings> settingsManager, ILog log)
         {
             _settings = settings;
             _log = log;

@@ -6,9 +6,7 @@ namespace Lykke.Job.RepositoryTgBot.Settings
 {
     public class AppSettings
     {
-        public string ConnectionString { get; set; }
-
-        public RepositoryTgBotSettings RepositoryTgBotJob { get; set; }
+        public RepositoryTgBotJobSettings RepositoryTgBotJob { get; set; }
 
         public SlackNotificationsSettings SlackNotifications { get; set; }
 
