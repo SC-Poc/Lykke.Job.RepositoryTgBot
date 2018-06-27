@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AzureStorage;
@@ -31,6 +32,14 @@ namespace Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory
             return list as IEnumerable<ITelegramBotHistory>;
         }
 
+        public async Task<ITelegramBotHistory> GetLatestAsync(Func<ITelegramBotHistory, bool> filter)
+        {
+            var pk = TelegramBotHistory.GeneratePartitionKey();
+            var list = await _tableStorage.GetDataAsync(pk);
+            var orderedList = list.OrderByDescending(x => x.Timestamp);
+            return orderedList.Where(filter).FirstOrDefault();
+        }
+
         public async Task<bool> SaveAsync(ITelegramBotHistory entity)
         {
             try
@@ -41,6 +50,8 @@ namespace Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory
 
                     tbh.ETag = entity.ETag;
                     tbh.ChatId = entity.ChatId;
+                    tbh.UserId = entity.UserId;
+                    tbh.TelegramUserName = entity.TelegramUserName;
                     tbh.GithubUserName = entity.GithubUserName;
                     tbh.Question = entity.Question;
                     tbh.Answer = entity.Answer;

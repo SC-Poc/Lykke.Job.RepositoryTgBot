@@ -4,6 +4,10 @@
     {
         long ChatId { get; set; }
 
+        long UserId { get; set; }
+
+        string TelegramUserName { get; set; }
+
         string GithubUserName { get; set; }
 
         string Question { get; set; }
