@@ -53,11 +53,22 @@ namespace Lykke.Job.RepositoryTgBot.Modules
                 .As<IStartable>()
                 .As<IStopable>()
                 .WithParameter(TypedParameter.From(_settings))
-                .SingleInstance(); 
+                .SingleInstance();
 
             // TODO: Add your dependencies here
+            RegisterPeriodicalHandlers(builder);
 
             builder.Populate(_services);
+        }
+
+        private void RegisterPeriodicalHandlers(ContainerBuilder builder)
+        {
+            // TODO: You should register each periodical handler in DI container as IStartable singleton and autoactivate it
+
+            builder.RegisterType<TeamListUpdater>()
+                .As<IStartable>()
+                .AutoActivate()
+                .SingleInstance();
         }
     }
 }

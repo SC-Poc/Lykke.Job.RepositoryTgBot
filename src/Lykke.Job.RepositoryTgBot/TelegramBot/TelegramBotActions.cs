@@ -16,7 +16,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         public string Description { get; set; }
         public bool AddSecurityTeam { get; set; }
         public bool AddCoreTeam { get; set; } 
-    } 
+    }
 
 
     public class TelegramBotActions
@@ -46,6 +46,20 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             return teamsList;
         }
 
+        public async Task<bool> RepositoryIsExist(string RepoName)
+        {
+            try
+            {
+                var repo = await client.Repository.Get(_organisation, RepoName);
+
+                return (repo != null);
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+        }
+
         public async Task<List<Team>> UserHasTeamCheckAsync(string nickName)
         {
             var teams = await client.Organization.Team.GetAll(_organisation);
@@ -54,7 +68,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
             foreach (var team in teams)
             {
-                var teamCheck =  await TeamMemberCheckAsync(nickName, team);
+                var teamCheck = await TeamMemberCheckAsync(nickName, team);
                 if (teamCheck)
                     listTeams.Add(team);
             }
@@ -88,7 +102,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                     branchTeams.Add(team.Name);
                     //Assigning new repo to the team
                     await client.Organization.Team.AddRepository(team.Id, _organisation, repositoryToEdit.Name, new RepositoryPermissionRequest(Permission.Admin));
-                    message += $"\n Team - \"{team.Name}\"";
+                    message += $"\n Teams: \n \"{team.Name}\"";
                 }
 
 
@@ -98,7 +112,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                     await client.Organization.Team.AddRepository(secTeam.Id, _organisation, repositoryToEdit.Name, new RepositoryPermissionRequest(Permission.Push));
                     branchTeams.Add("Security");
                     codeOwnersFile += $"@{_organisation}/Security ";
-                    message += $"\n Team - \"Security\"";
+                    message += $"\n \"Security\"";
                 }
 
                 if (repoToCreate.AddCoreTeam)
@@ -107,7 +121,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                     await client.Organization.Team.AddRepository(secTeam.Id, _organisation, repositoryToEdit.Name, new RepositoryPermissionRequest(Permission.Push));
                     branchTeams.Add("Core");
                     codeOwnersFile += $"@{_organisation}/Core ";
-                    message += $"\n Team - \"Core\"";
+                    message += $"\n \"Core\"";
                 }
 
                 //creating Code Owners file
@@ -129,11 +143,11 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
                 return new TelegramBotActionResult { Success = true, Message = message };
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return new TelegramBotActionResult { Success = false, Message = ex.Message };
             }
-            
+
         }
 
         /// <summary>
@@ -154,12 +168,18 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
             if (userInTeam)
                 //return success false with message
-                return new TelegramBotActionResult { Success = false, Message = $"User {nickName} alrady in team: {team.Name}." };
+                return new TelegramBotActionResult { Success = true, Message = $"User {nickName} alrady in team: {team.Name}." };
 
             await client.Organization.Team.AddOrEditMembership(team.Id, nickName, new UpdateTeamMembership(TeamRole.Member));
 
             //return success true with message
             return new TelegramBotActionResult { Success = true, Message = $"User {nickName} added in team {team.Name} as a member." };
+        }
+
+        public async Task<string> GetTeamById(int teamId)
+        {
+            var team = await client.Organization.Team.Get(teamId);
+            return team.Name;
         }
 
 
