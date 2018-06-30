@@ -8,6 +8,7 @@ using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Args;
@@ -93,10 +94,17 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == message.Chat.Id && x.UserId == message.From.Id);
                 if (prevQuestion != null && prevQuestion.Question == _questionEnterName)
                 {
+                    
+
                     var repoIsAlreadyExists = await _actions.RepositoryIsExist(message.Text);
-                    if (repoIsAlreadyExists)
+                    if (!Regex.IsMatch(message.Text, @"^[a-zA-Z0-9._-]+$"))
                     {
-                        await SendTextToUser(message.Chat.Id, "Repository with this name already exists.");
+                        await SendTextToUser(message.Chat.Id, $"@{message.From.Username} \n" + "Incorrect format.");
+                        await _bot.SendTextMessageAsync(message.Chat.Id, $"@{message.From.Username} \n" + _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = true });
+                    }
+                    else if (repoIsAlreadyExists)
+                    {
+                        await SendTextToUser(message.Chat.Id, $"@{message.From.Username} \n" + "Repository with this name already exists.");
                         await _bot.SendTextMessageAsync(message.Chat.Id, $"@{message.From.Username} \n" + _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = true });
                     }
                     else
@@ -215,23 +223,14 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             var result = await CheckForGroupAccess(callbackQuery.Message.Chat.Id, callbackQuery.Message.Chat.Title);
             if (!result) return;
 
-            if (callbackQuery.Message.Text == _chooseTeam)
+            if (callbackQuery.Message.Text == $"@{callbackQuery.From.Username} \n" + _chooseTeam)
             {
                 TimeoutTimer.Stop();
-                var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == callbackQuery.Message.Chat.Id && x.UserId == callbackQuery.From.Id);
+                 var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == callbackQuery.Message.Chat.Id && x.UserId == callbackQuery.From.Id);
                 if (prevQuestion == null || prevQuestion.Question == _chooseTeam)
                 {
-                    var userName = callbackQuery.From.Username;
-                    var userResult = await _actions.AddUserInTeam(userName, Convert.ToInt32(callbackQuery.Data));
-                    if (!userResult.Success)
-                    {
-                        await SendTextToUser(callbackQuery.Message.Chat.Id, userResult.Message);
-                    }
-
-                    var message = callbackQuery.Message;
-
                     await _bot.SendTextMessageAsync(callbackQuery.Message.Chat.Id, $"@{callbackQuery.From.Username} \n" + _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = true });
-                    await CreateBotHistory(message.Chat.Id, callbackQuery.From.Id, callbackQuery.From.Username, _questionEnterName, callbackQuery.Data);
+                    await CreateBotHistory(callbackQuery.Message.Chat.Id, callbackQuery.From.Id, callbackQuery.From.Username, _questionEnterName, callbackQuery.Data);
                     TimeoutTimer.Start();
                 }
                 else
