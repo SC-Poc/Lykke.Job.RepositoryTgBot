@@ -224,17 +224,8 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                  var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == callbackQuery.Message.Chat.Id && x.UserId == callbackQuery.From.Id);
                 if (prevQuestion == null || prevQuestion.Question == _chooseTeam)
                 {
-                    var userName = callbackQuery.From.Username;
-                    var userResult = await _actions.AddUserInTeam(userName, Convert.ToInt32(callbackQuery.Data));
-                    if (!userResult.Success)
-                    {
-                        await SendTextToUser(callbackQuery.Message.Chat.Id, userResult.Message);
-                    }
-
-                    var message = callbackQuery.Message;
-
                     await _bot.SendTextMessageAsync(callbackQuery.Message.Chat.Id, $"@{callbackQuery.From.Username} \n" + _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = true });
-                    await CreateBotHistory(message.Chat.Id, callbackQuery.From.Id, callbackQuery.From.Username, _questionEnterName, callbackQuery.Data);
+                    await CreateBotHistory(callbackQuery.Message.Chat.Id, callbackQuery.From.Id, callbackQuery.From.Username, _questionEnterName, callbackQuery.Data);
                     TimeoutTimer.Start();
                 }
                 else

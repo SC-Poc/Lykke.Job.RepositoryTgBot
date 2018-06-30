@@ -109,7 +109,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 }
                 if (repoToCreate.AddSecurityTeam)
                 {
-                    var securityTeam = RepositoryTgBotJobSettings.CoreTeam.ToLower().Replace(' ', '-');
+                    var securityTeam = RepositoryTgBotJobSettings.SecurityTeam.ToLower().Replace(' ', '-');
                     branchTeams.Add(securityTeam);
                     codeOwnersFile += $"@{_organisation}/{securityTeam} ";
                     message += $"\n \"{RepositoryTgBotJobSettings.SecurityTeam}\"";
