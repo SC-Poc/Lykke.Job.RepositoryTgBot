@@ -1,4 +1,5 @@
-﻿using Octokit;
+﻿using Lykke.Job.RepositoryTgBot.Settings.JobSettings;
+using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,13 +22,13 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
     public class TelegramBotActions
     {
-        private static GitHubClient client = new GitHubClient(new ProductHeaderValue("RepositoryTgBot"));
+        private static GitHubClient client = new GitHubClient(new ProductHeaderValue(RepositoryTgBotJobSettings.BotName));
 
         private static string _organisation;
 
         public TelegramBotActions(string organisation, string token)
         {
-            _organisation = organisation;
+            _organisation = organisation.ToLower().Replace(' ', '-');
             var tokenAuth = new Credentials(token);
             client.Credentials = tokenAuth;
         }
@@ -87,41 +88,38 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             try
             {
                 var team = await client.Organization.Team.Get(repoToCreate.TeamId);
+                var teamName = team.Name.ToLower().Replace(' ', '-');
 
-                var codeOwnersFile = (team != null) ? $"* @{_organisation}/{team.Name} " : "* ";
-
+                var codeOwnersFile = (team != null) ? $"* @{_organisation}/{teamName} " : "* ";
+                var commonDevelopersTeam = await GetTeamByName(RepositoryTgBotJobSettings.CommonDevelopersTeam);
+                
                 var message = $"Repository \"{repoToCreate.RepoName}\" susessfully created.";
                 //Creating new repo
-                var newRepo = new NewRepository(repoToCreate.RepoName) { AutoInit = true, TeamId = (team != null) ? team.Id : default, Description = repoToCreate.Description };
+                var newRepo = new NewRepository(repoToCreate.RepoName) { AutoInit = true, TeamId = commonDevelopersTeam.Id, Description = repoToCreate.Description };
 
                 var repositoryToEdit = await client.Repository.Create(_organisation, newRepo);
+
+                await client.Organization.Team.AddRepository(commonDevelopersTeam.Id, _organisation, repositoryToEdit.Name, new RepositoryPermissionRequest(Permission.Push));
 
                 var branchTeams = new BranchProtectionTeamCollection();
                 if (team != null)
                 {
-                    branchTeams.Add(team.Name);
-                    //Assigning new repo to the team
-                    await client.Organization.Team.AddRepository(team.Id, _organisation, repositoryToEdit.Name, new RepositoryPermissionRequest(Permission.Admin));
+                    branchTeams.Add(teamName);
                     message += $"\n Teams: \n \"{team.Name}\"";
                 }
-
-
                 if (repoToCreate.AddSecurityTeam)
                 {
-                    var secTeam = await GetTeamByName("Security");
-                    await client.Organization.Team.AddRepository(secTeam.Id, _organisation, repositoryToEdit.Name, new RepositoryPermissionRequest(Permission.Push));
-                    branchTeams.Add("Security");
-                    codeOwnersFile += $"@{_organisation}/Security ";
-                    message += $"\n \"Security\"";
+                    var securityTeam = RepositoryTgBotJobSettings.CoreTeam.ToLower().Replace(' ', '-');
+                    branchTeams.Add(securityTeam);
+                    codeOwnersFile += $"@{_organisation}/{securityTeam} ";
+                    message += $"\n \"{RepositoryTgBotJobSettings.SecurityTeam}\"";
                 }
-
                 if (repoToCreate.AddCoreTeam)
                 {
-                    var secTeam = await GetTeamByName("Core");
-                    await client.Organization.Team.AddRepository(secTeam.Id, _organisation, repositoryToEdit.Name, new RepositoryPermissionRequest(Permission.Push));
-                    branchTeams.Add("Core");
-                    codeOwnersFile += $"@{_organisation}/Core ";
-                    message += $"\n \"Core\"";
+                    var coreTeam = RepositoryTgBotJobSettings.CoreTeam.ToLower().Replace(' ', '-');
+                    branchTeams.Add(coreTeam);
+                    codeOwnersFile += $"@{_organisation}/{coreTeam} ";
+                    message += $"\n \"{RepositoryTgBotJobSettings.CoreTeam}\"";
                 }
 
                 //creating Code Owners file
@@ -133,13 +131,11 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 await client.Git.Reference.Create(repositoryToEdit.Id, new NewReference("refs/heads/dev", masterSha));
                 await client.Git.Reference.Create(repositoryToEdit.Id, new NewReference("refs/heads/test", masterSha));
 
-                //Permitions to "test" and "master" branches
-                var masterProtSett = new BranchProtectionSettingsUpdate(new BranchProtectionPushRestrictionsUpdate(branchTeams));
-                var testProtSett = new BranchProtectionSettingsUpdate(null, new BranchProtectionRequiredReviewsUpdate(new BranchProtectionRequiredReviewsDismissalRestrictionsUpdate(false), true, true), new BranchProtectionPushRestrictionsUpdate(branchTeams), true);
-
-                await client.Repository.Branch.UpdateBranchProtection(repositoryToEdit.Id, "master", masterProtSett);
+                //Permitions to "test" branch
+                var masterProtSett = new BranchProtectionSettingsUpdate(new BranchProtectionPushRestrictionsUpdate(new BranchProtectionTeamCollection(new List<string>() { teamName })));
+                var testProtSett = new BranchProtectionSettingsUpdate(null, new BranchProtectionRequiredReviewsUpdate(new BranchProtectionRequiredReviewsDismissalRestrictionsUpdate(false), true, true), new BranchProtectionPushRestrictionsUpdate(branchTeams), true);                
                 await client.Repository.Branch.UpdateBranchProtection(repositoryToEdit.Id, "test", testProtSett);
-
+                await client.Repository.Branch.UpdateBranchProtection(repositoryToEdit.Id, "master", masterProtSett);
 
                 return new TelegramBotActionResult { Success = true, Message = message };
             }
