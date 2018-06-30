@@ -93,7 +93,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 var codeOwnersFile = (team != null) ? $"* @{_organisation}/{teamName} " : "* ";
                 var commonDevelopersTeam = await GetTeamByName(RepositoryTgBotJobSettings.CommonDevelopersTeam);
                 
-                var message = $"Repository \"{repoToCreate.RepoName}\" susessfully created.";
+                var message = $"Repository \"{repoToCreate.RepoName}\" successfully created.";
                 //Creating new repo
                 var newRepo = new NewRepository(repoToCreate.RepoName) { AutoInit = true, TeamId = commonDevelopersTeam.Id, Description = repoToCreate.Description };
 
