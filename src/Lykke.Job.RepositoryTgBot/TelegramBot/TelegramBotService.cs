@@ -78,14 +78,16 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 #if DEBUG
             Console.WriteLine("BotOnMessageReceived - " + messageEventArgs.Message.Text);
 #endif
-            
 
             var message = messageEventArgs.Message;
+
+            var result = await CheckForGroupAccess(message.Chat.Id, message.Chat.Title);
+            if (!result) return;
 
             if (message == null || message.Type != MessageType.Text) return;
 
             // get repository name and checking user
-            if (message.ReplyToMessage?.Text == $"@{message.From.Username} \n"+ _questionEnterName && TimeoutTimer.Working && CurrentUser.User.Id == message.From.Id)
+            if (message.ReplyToMessage?.Text == $"@{message.From.Username} \n" + _questionEnterName && TimeoutTimer.Working && CurrentUser.User.Id == message.From.Id)
             {
                 TimeoutTimer.Stop();
                 var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == message.Chat.Id && x.UserId == message.From.Id);
@@ -103,7 +105,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                         await CreateBotHistory(message.Chat.Id, message.From.Id, message.From.Username, _questionEnterDesc, message.Text);
                     }
 
-                    
+
                     TimeoutTimer.Start();
 
                 }
@@ -111,7 +113,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 {
                     await SendTextToUser(message.Chat.Id);
                 }
-                    
+
             }
 
             // get repository description and checking user
@@ -137,14 +139,14 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                     await _bot.SendTextMessageAsync(message.Chat.Id, inlineMessage.Text, replyMarkup: inlineMessage.ReplyMarkup);
                     await CreateBotHistory(message.Chat.Id, message.From.Id, message.From.Username, _questionSecurity, message.Text);
 
-                    
+
                     TimeoutTimer.Start();
                 }
                 else
                 {
                     await SendTextToUser(message.Chat.Id);
                 }
-                
+
             }
             else if (TimeoutTimer.Working && CurrentUser.User.Id != message.From.Id)
             {
@@ -155,7 +157,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             else
             {
                 var firstWord = message.Text.Split(' ').First();
-                var command = firstWord.IndexOf('@')==-1 ? firstWord : firstWord.Substring(0, firstWord.IndexOf('@'));
+                var command = firstWord.IndexOf('@') == -1 ? firstWord : firstWord.Substring(0, firstWord.IndexOf('@'));
                 switch (command)
                 {
                     // send inline menu keyboard
@@ -163,7 +165,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
                         var TeamId = await GetUserTeamId(message.Chat.Id, message.From.Id);
                         string addTeam = "";
-                        if (TeamId!=0)
+                        if (TeamId != 0)
                         {
                             var teamName = await _actions.GetTeamById(TeamId);
                             addTeam = $"\nYour team is \"{teamName}\"";
@@ -209,6 +211,9 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         {
             //Here implements actions on reciving
             var callbackQuery = callbackQueryEventArgs.CallbackQuery;
+
+            var result = await CheckForGroupAccess(callbackQuery.Message.Chat.Id, callbackQuery.Message.Chat.Title);
+            if (!result) return;
 
             if (callbackQuery.Message.Text == _chooseTeam)
             {
@@ -315,7 +320,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                     case _questionEnterName:
                         TimeoutTimer.Stop();
                         question = _questionEnterName;
-                        await _bot.SendTextMessageAsync(message.Chat.Id, $"@{callbackQuery.From.Username} \n" + _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = true  });
+                        await _bot.SendTextMessageAsync(message.Chat.Id, $"@{callbackQuery.From.Username} \n" + _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = true });
 
                         TimeoutTimer.Start();
                         break;
@@ -375,7 +380,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 }
 
                 await CreateBotHistory(message.Chat.Id, callbackQuery.From.Id, callbackQuery.From.Username, question, callbackQuery.Data);
-            }            
+            }
         }
 
         public void Start()
@@ -398,7 +403,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             Dispose();
         }
 
-#region Private Methods
+        #region Private Methods
         private async Task SendTextToUser(long chatId, string text = "")
         {
             const string usage = @"
@@ -491,7 +496,19 @@ Usage:
             var entity = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == chatId && x.UserId == userId && x.Question == _chooseTeam);
             return entity?.Answer.ParseIntOrDefault(0) ?? 0;
         }
-#endregion
+
+        private async Task<bool> CheckForGroupAccess(long chatId, string groupName)
+        {
+            if (!String.IsNullOrWhiteSpace(RepositoryTgBotJobSettings.AllowedGroupName) && groupName != RepositoryTgBotJobSettings.AllowedGroupName)
+            {
+                await SendTextToUser(chatId, "Access denied");
+                return false;
+            }
+
+            return true;
+        }
+
+        #endregion
         public static async Task UpdateListOfTeams()
         {
             teams = await _actions.GetTeamsAsync();
@@ -500,13 +517,13 @@ Usage:
 
         public async void Timeout()
         {
-            if (CurrentUser.ChatId !=0)
+            if (CurrentUser.ChatId != 0)
             {
                 await CreateBotHistory(CurrentUser.ChatId, CurrentUser.User.Id, CurrentUser.User.Username, "Timeout");
                 await SendTextToUser(CurrentUser.ChatId, $"@{CurrentUser.User.Username} Sorry, but time is out. Please create your repository again.");
                 TimeoutTimer.Stop();
             }
-            
+
 
         }
 

@@ -11,5 +11,6 @@
         public static string SecurityTeam { get; set; }
         public static string CoreTeam { get; set; }
         public static int TimeoutPeriodSeconds { get; set; }
+        public static string AllowedGroupName { get; set; }
     }
 }
