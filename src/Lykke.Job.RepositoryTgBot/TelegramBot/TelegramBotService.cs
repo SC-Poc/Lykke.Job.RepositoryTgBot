@@ -210,10 +210,10 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             //Here implements actions on reciving
             var callbackQuery = callbackQueryEventArgs.CallbackQuery;
 
-            if (callbackQuery.Message.Text == _chooseTeam)
+            if (callbackQuery.Message.Text == $"@{callbackQuery.From.Username} \n" + _chooseTeam)
             {
                 TimeoutTimer.Stop();
-                var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == callbackQuery.Message.Chat.Id && x.UserId == callbackQuery.From.Id);
+                 var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == callbackQuery.Message.Chat.Id && x.UserId == callbackQuery.From.Id);
                 if (prevQuestion == null || prevQuestion.Question == _chooseTeam)
                 {
                     var userName = callbackQuery.From.Username;
