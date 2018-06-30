@@ -8,6 +8,7 @@ using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Args;
@@ -91,10 +92,17 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == message.Chat.Id && x.UserId == message.From.Id);
                 if (prevQuestion != null && prevQuestion.Question == _questionEnterName)
                 {
+                    
+
                     var repoIsAlreadyExists = await _actions.RepositoryIsExist(message.Text);
-                    if (repoIsAlreadyExists)
+                    if (!Regex.IsMatch(message.Text, @"^[a-zA-Z0-9._-]+$"))
                     {
-                        await SendTextToUser(message.Chat.Id, "Repository with this name already exists.");
+                        await SendTextToUser(message.Chat.Id, $"@{message.From.Username} \n" + "Incorrect format.");
+                        await _bot.SendTextMessageAsync(message.Chat.Id, $"@{message.From.Username} \n" + _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = true });
+                    }
+                    else if (repoIsAlreadyExists)
+                    {
+                        await SendTextToUser(message.Chat.Id, $"@{message.From.Username} \n" + "Repository with this name already exists.");
                         await _bot.SendTextMessageAsync(message.Chat.Id, $"@{message.From.Username} \n" + _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = true });
                     }
                     else
