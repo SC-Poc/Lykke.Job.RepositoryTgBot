@@ -131,7 +131,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == message.Chat.Id && x.UserId == message.From.Id);
 
                 var teamName = await GetTeamName(message.Chat.Id, message.From.Id);
-                teamName = RepositoryTgBotJobSettings.SecurityTeam;
                 if (prevQuestion != null && prevQuestion.Question == _questionEnterDesc && teamName != RepositoryTgBotJobSettings.SecurityTeam)
                 {
                     var inlineMessage = new InlineMessage
@@ -354,7 +353,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                         }
 
                         var teamName = await GetTeamName(message.Chat.Id, message.From.Id);
-                        teamName = RepositoryTgBotJobSettings.CoreTeam;
                         question = _questionMultipleTeams;
                         if (teamName != RepositoryTgBotJobSettings.CoreTeam)
                         {
