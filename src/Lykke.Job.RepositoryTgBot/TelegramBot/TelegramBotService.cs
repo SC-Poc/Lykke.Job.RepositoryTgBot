@@ -44,8 +44,12 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         #region Constants
 
         private string _mainMenu = "Create new repository";
+
         private const string _createGithubRepo = "CreateGithubRepo";
+        private const string _resetTeam = "ResetTeam";
+
         private const string _chooseTeam = "What is your team?";
+
         private const string _questionEnterName = "Enter repository name";
         private const string _questionEnterDesc = "Enter repository description";
         private const string _questionSecurity = "Will service interact with sensitive data, finance operations or includes other security risks?";
@@ -180,31 +184,46 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             // read commands
             else
             {
+                if (TimeoutTimer.Working && CurrentUser.User.Id == message.From.Id)
+                    TimeoutTimer.Stop();
                 var firstWord = message.Text.Split(' ').First();
                 var command = firstWord.IndexOf('@') == -1 ? firstWord : firstWord.Substring(0, firstWord.IndexOf('@'));
                 switch (command)
                 {
+
                     // send inline menu keyboard
                     case "/create":
 
                         var TeamId = await GetUserTeamId(message.Chat.Id, message.From.Id);
                         string addTeam = "";
-                        if (TeamId != 0)
-                        {
-                            var teamName = await _actions.GetTeamById(TeamId);
-                            addTeam = $"\nYour team is \"{teamName}\"";
-                        }
-
                         var inlineMessage = new InlineMessage();
-                        inlineMessage.Text = $"@{message.From.Username} \n" + _mainMenu + addTeam;
-                        inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(new[]
+
+                        var inlineKeyboard =new List<IEnumerable<InlineKeyboardButton>>()
                         {
                             new [] // first row
                             {
                                 InlineKeyboardButton.WithCallbackData("Create Repo", _createGithubRepo),
                                 //InlineKeyboardButton.WithCallbackData("Test","Test")
                             }
-                        });
+                        };
+
+                        if (TeamId != 0)
+                        {
+                            var teamName = await _actions.GetTeamById(TeamId);
+                            addTeam = $"\nYour team is \"{teamName}\"";
+                            inlineKeyboard.Add(
+                            new [] // first row
+                            {
+                                InlineKeyboardButton.WithCallbackData("Reset my team", _resetTeam),
+                                //InlineKeyboardButton.WithCallbackData("Test","Test")
+                            });
+                        }
+
+
+                        
+                        inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(inlineKeyboard);
+
+                        inlineMessage.Text = $"@{message.From.Username} \n" + _mainMenu + addTeam;
 
                         await _bot.SendTextMessageAsync(message.Chat.Id, inlineMessage.Text, replyMarkup: inlineMessage.ReplyMarkup);
                         var botHistory = new TelegramBotHistory
@@ -217,6 +236,10 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                         };
 
                         await _telegramBotHistoryRepository.SaveAsync(botHistory);
+                        break;
+
+                    case "/resetMyTeam":
+                        await ClearTeam(message.Chat.Id, message.From);
                         break;
                     default:
                         //send default answer
@@ -405,6 +428,10 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                             $"repoToCreate.TeamId: {repoToCreate.TeamId} \n " +
                             $"repoToCreate.UserId: {repoToCreate.UserId} ");
                         break;
+                    case _resetTeam:
+                        TimeoutTimer.Stop();
+                        await ClearTeam(message.Chat.Id, callbackQuery.From);
+                        break;
                 }
 
                 if(!historyCreateSkipped)
@@ -437,7 +464,8 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         {
             const string usage = @"
 Usage:
-/create - to start creating repository";
+/create - to start creating repository
+/resetMyTeam - to reset your team";
 
             await _bot.SendTextMessageAsync(
                 chatId,
@@ -529,6 +557,20 @@ Usage:
             var teamId = entity.Answer;
 
             return await _actions.GetTeamById(Convert.ToInt32(teamId));
+        }
+
+        public async Task ClearTeam(long chatId, Telegram.Bot.Types.User user)
+        {
+            var entities = await _telegramBotHistoryRepository.GetAllAsync(x =>
+                x.Question == _chooseTeam && x.ChatId == chatId && x.UserId == user.Id);
+            if (entities != null)
+            {
+                foreach(var entity in entities)
+                {
+                    await _telegramBotHistoryRepository.RemoveAsync(entity.RowKey);
+                }
+            }
+            await SendTextToUser(chatId, $"@{user.Username} \n" + "Your team was reseted.");
         }
 
         private async Task<int> GetUserTeamId(long chatId, long userId)

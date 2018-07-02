@@ -137,6 +137,9 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 await client.Repository.Branch.UpdateBranchProtection(repositoryToEdit.Id, "test", testProtSett);
                 await client.Repository.Branch.UpdateBranchProtection(repositoryToEdit.Id, "master", masterProtSett);
 
+                var link = repositoryToEdit.CloneUrl;
+                message += "\n Clone url: " + link;
+
                 return new TelegramBotActionResult { Success = true, Message = message };
             }
             catch (Exception ex)
