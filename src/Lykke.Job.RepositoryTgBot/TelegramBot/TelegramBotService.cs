@@ -131,6 +131,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == message.Chat.Id && x.UserId == message.From.Id);
 
                 var teamName = await GetTeamName(message.Chat.Id, message.From.Id);
+                teamName = RepositoryTgBotJobSettings.SecurityTeam;
                 if (prevQuestion != null && prevQuestion.Question == _questionEnterDesc && teamName != RepositoryTgBotJobSettings.SecurityTeam)
                 {
                     var inlineMessage = new InlineMessage
@@ -162,8 +163,9 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                             Username = message.From.Username
                         }
                     };
-                    await SendResponseMarkup(callbackQuery, message);
+
                     await CreateBotHistory(message.Chat.Id, message.From.Id, message.From.Username, _questionSecurity, message.Text);
+                    await SendResponseMarkup(callbackQuery, message);
                 }
                 else
                 {
@@ -273,6 +275,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
         private async Task SendResponseMarkup(CallbackQuery callbackQuery, Message message)
         {
+            var historyCreateSkipped = false;
             if (TimeoutTimer.Working && CurrentUser.User.Id != callbackQuery.From.Id)
             {
                 await SendTextToUser(callbackQuery.Message.Chat.Id, $"@{callbackQuery.From.Username} Please, wait for  user @{CurrentUser.User.Username} finishes creating repository");
@@ -351,6 +354,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                         }
 
                         var teamName = await GetTeamName(message.Chat.Id, message.From.Id);
+                        teamName = RepositoryTgBotJobSettings.CoreTeam;
                         question = _questionMultipleTeams;
                         if (teamName != RepositoryTgBotJobSettings.CoreTeam)
                         {
@@ -370,6 +374,8 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                         }
                         else
                         {
+                            await CreateBotHistory(message.Chat.Id, callbackQuery.From.Id, callbackQuery.From.Username, question, callbackQuery.Data);
+                            historyCreateSkipped = true;
                             callbackQuery.Data = "NoCore";
                             await SendResponseMarkup(callbackQuery, message);
                         }
@@ -403,7 +409,8 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                         break;
                 }
 
-                await CreateBotHistory(message.Chat.Id, callbackQuery.From.Id, callbackQuery.From.Username, question, callbackQuery.Data);
+                if(!historyCreateSkipped)
+                    await CreateBotHistory(message.Chat.Id, callbackQuery.From.Id, callbackQuery.From.Username, question, callbackQuery.Data);
             }
         }
 
