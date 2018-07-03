@@ -352,22 +352,25 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                             break;
                         }
 
-                        var teamName = await GetTeamName(message.Chat.Id, message.From.Id);
+                        var teamName = await GetTeamName(message.Chat.Id, callbackQuery.From.Id);
                         question = _questionMultipleTeams;
                         if (teamName != RepositoryTgBotJobSettings.CoreTeam)
                         {
                             inlineMessage.Text = $"@{callbackQuery.From.Username} \n" + _questionMultipleTeams;
                             inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(new[]
                             {
-                            new [] // first row
-                            {
-                                InlineKeyboardButton.WithCallbackData("Yes", "Core"),
-                                InlineKeyboardButton.WithCallbackData("No", "NoCore")
-                            }
-                        });
+                                new [] // first row
+                                {
+                                    InlineKeyboardButton.WithCallbackData("Yes", "Core"),
+                                    InlineKeyboardButton.WithCallbackData("No", "NoCore")
+                                }
+                            });
 
-                            await _bot.EditMessageTextAsync(message.Chat.Id, message.MessageId, inlineMessage.Text, ParseMode.Default,
-                                    false, inlineMessage.ReplyMarkup);
+                            //await _bot.EditMessageTextAsync(message.Chat.Id, message.MessageId, inlineMessage.Text, ParseMode.Default,
+                            //        false, inlineMessage.ReplyMarkup);
+
+                            await _bot.SendTextMessageAsync(message.Chat.Id, inlineMessage.Text, ParseMode.Default,
+                                replyMarkup: inlineMessage.ReplyMarkup);
                             TimeoutTimer.Start();
                         }
                         else
@@ -407,7 +410,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                         break;
                 }
 
-                if(!historyCreateSkipped)
+                if (!historyCreateSkipped)
                     await CreateBotHistory(message.Chat.Id, callbackQuery.From.Id, callbackQuery.From.Username, question, callbackQuery.Data);
             }
         }
