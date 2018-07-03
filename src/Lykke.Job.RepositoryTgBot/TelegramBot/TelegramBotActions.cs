@@ -70,8 +70,11 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             foreach (var team in teams)
             {
                 var teamCheck = await TeamMemberCheckAsync(nickName, team);
+
                 if (teamCheck)
+                {
                     listTeams.Add(team);
+                }                    
             }
 
             return listTeams;
@@ -192,14 +195,14 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         {
             var members = await client.Organization.Team.GetAllMembers(team.Id);
 
-            return members.Any(x => x.Name == nickName);
+            return members.Any(x => x.Login.ToLower() == nickName.ToLower());
         }
 
         private async Task<bool> TeamRepoCheckAsync(string repoName, int teamId)
         {
             var repositories = await client.Organization.Team.GetAllRepositories(teamId);
 
-            return repositories.Any(x => x.Name == repoName);
+            return repositories.Any(x => x.Name.ToLower() == repoName.ToLower());
         }
     }
 
