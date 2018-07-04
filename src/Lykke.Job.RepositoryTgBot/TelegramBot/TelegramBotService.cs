@@ -88,7 +88,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
             var message = messageEventArgs.Message;
 
-            var result = await CheckForGroupAccess(message.Chat.Id, message.Chat.Title);
+            var result = await CheckForGroupAccess(message.Chat.Id, message.Chat.Id);
             if (!result) return;
 
             if (message == null || message.Type != MessageType.Text) return;
@@ -118,7 +118,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                             await _bot.SendTextMessageAsync(message.Chat.Id, $"@{message.From.Username} \n" + _questionEnterDesc, replyMarkup: new ForceReplyMarkup { Selective = true });
                             await CreateBotHistory(message.Chat.Id, message.From.Id, message.From.Username, _questionEnterDesc, message.Text);
                         }
-                    }  
+                    }
 
                     TimeoutTimer.Start();
 
@@ -179,12 +179,12 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
             }
 
-            else if(message.ReplyToMessage?.Text == $"@{message.From.Username} \n" + _questionEnterGitAcc && TimeoutTimer.Working && CurrentUser.User.Id == message.From.Id)
+            else if (message.ReplyToMessage?.Text == $"@{message.From.Username} \n" + _questionEnterGitAcc && TimeoutTimer.Working && CurrentUser.User.Id == message.From.Id)
             {
                 TimeoutTimer.Stop();
                 var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == message.Chat.Id && x.UserId == message.From.Id);
                 if (prevQuestion != null && prevQuestion.Question == _questionEnterGitAcc)
-                {                    
+                {
                     if (!Regex.IsMatch(message.Text, @"^[a-zA-Z0-9._-]+$"))
                     {
                         await SendTextToUser(message.Chat.Id, $"@{message.From.Username} \n" + "Incorrect format.");
@@ -211,7 +211,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                         {
                             var inlineMessage = TeamListToSend(message.From.Username, gitUserTeamList, "You are assigned to multiple teams.\n");
                             await _bot.SendTextMessageAsync(message.Chat.Id, inlineMessage.Text, replyMarkup: inlineMessage.ReplyMarkup);
-                            
+
                         }
 
                     }
@@ -248,7 +248,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                         string addTeam = "";
                         var inlineMessage = new InlineMessage();
 
-                        var inlineKeyboard =new List<IEnumerable<InlineKeyboardButton>>()
+                        var inlineKeyboard = new List<IEnumerable<InlineKeyboardButton>>()
                         {
                             new [] // first row
                             {
@@ -262,7 +262,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                             var teamName = await _actions.GetTeamById(TeamId);
                             addTeam = $"\nYour team is \"{teamName}\"";
                             inlineKeyboard.Add(
-                            new [] // first row
+                            new[] // first row
                             {
                                 InlineKeyboardButton.WithCallbackData("Reset my team", _resetTeam),
                                 //InlineKeyboardButton.WithCallbackData("Test","Test")
@@ -270,7 +270,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                         }
 
 
-                        
+
                         inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(inlineKeyboard);
 
                         inlineMessage.Text = $"@{message.From.Username} \n" + _mainMenu + addTeam;
@@ -291,6 +291,9 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                     case "/resetMyTeam":
                         await ClearTeam(message.Chat.Id, message.From);
                         break;
+                    case "/getGroupId":
+                        await SendTextToUser(message.Chat.Id, $"Group Id: {message.Chat.Id}");
+                        break;
                     default:
                         //send default answer
                         await SendTextToUser(message.Chat.Id);
@@ -304,7 +307,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             //Here implements actions on reciving
             var callbackQuery = callbackQueryEventArgs.CallbackQuery;
 
-            var result = await CheckForGroupAccess(callbackQuery.Message.Chat.Id, callbackQuery.Message.Chat.Title);
+            var result = await CheckForGroupAccess(callbackQuery.Message.Chat.Id, callbackQuery.Message.Chat.Id);
             if (!result) return;
 
             if (callbackQuery.Message.Text.Contains(_chooseTeam))
@@ -546,13 +549,13 @@ Usage:
             }
         }
 
-        private InlineMessage TeamListToSend(string username, List<Team> teamsToShow, string message ="")
+        private InlineMessage TeamListToSend(string username, List<Team> teamsToShow, string message = "")
         {
             var inlineMessage = new InlineMessage();
             var maxRowLength = 2;
             if (teamsToShow.Any())
             {
-                inlineMessage.Text = $"@{username} \n" + message +_chooseTeam;
+                inlineMessage.Text = $"@{username} \n" + message + _chooseTeam;
                 var inlineKeyBoardButtons = new List<List<InlineKeyboardButton>>();
                 var buttons = new List<InlineKeyboardButton>();
                 foreach (var team in teamsToShow)
@@ -631,7 +634,7 @@ Usage:
                 x.Question == _chooseTeam && x.ChatId == chatId && x.UserId == user.Id);
             if (entities != null)
             {
-                foreach(var entity in entities)
+                foreach (var entity in entities)
                 {
                     await _telegramBotHistoryRepository.RemoveAsync(entity.RowKey);
                 }
@@ -645,9 +648,9 @@ Usage:
             return entity?.Answer.ParseIntOrDefault(0) ?? 0;
         }
 
-        private async Task<bool> CheckForGroupAccess(long chatId, string groupName)
+        private async Task<bool> CheckForGroupAccess(long chatId, long groupId)
         {
-            if (!String.IsNullOrWhiteSpace(RepositoryTgBotJobSettings.AllowedGroupName) && groupName != RepositoryTgBotJobSettings.AllowedGroupName)
+            if (RepositoryTgBotJobSettings.AllowedGroupId != 0 && groupId != RepositoryTgBotJobSettings.AllowedGroupId)
             {
                 await SendTextToUser(chatId, "Access denied");
                 return false;
