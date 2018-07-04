@@ -25,6 +25,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         private static GitHubClient client = new GitHubClient(new ProductHeaderValue(RepositoryTgBotJobSettings.BotName));
 
         private static string _organisation;
+        private static string _devTeam = RepositoryTgBotJobSettings.CommonDevelopersTeam;
 
         public TelegramBotActions(string organisation, string token)
         {
@@ -41,9 +42,12 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
             foreach (var team in teams)
             {
-                teamsList.Add(team);
-            }
+                if (team.Name != _devTeam)
+                {
+                    teamsList.Add(team);
+                }
 
+            }
             return teamsList;
         }
 
@@ -69,12 +73,15 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
             foreach (var team in teams)
             {
-                var teamCheck = await TeamMemberCheckAsync(nickName, team);
-
-                if (teamCheck)
+                if(team.Name != _devTeam)
                 {
-                    listTeams.Add(team);
-                }                    
+                    var teamCheck = await TeamMemberCheckAsync(nickName, team);
+
+                    if (teamCheck)
+                    {
+                        listTeams.Add(team);
+                    }
+                }                 
             }
 
             return listTeams;
