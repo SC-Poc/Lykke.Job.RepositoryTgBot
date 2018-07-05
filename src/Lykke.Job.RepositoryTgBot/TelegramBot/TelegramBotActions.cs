@@ -17,6 +17,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         public string Description { get; set; }
         public bool AddSecurityTeam { get; set; }
         public bool AddCoreTeam { get; set; } 
+        public string MenuAction { get; set; }
     }
 
 
@@ -91,6 +92,54 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         {
             var inOrganisation = await client.Organization.Member.CheckMember(_organisation, nickName);
             return inOrganisation;
+        }
+
+        public async Task<TelegramBotActionResult> CreateLibraryRepo(RepoToCreate repoToCreate)
+        {
+            try
+            {
+                var team = await client.Organization.Team.Get(repoToCreate.TeamId);
+                var teamName = team.Name.ToLower().Replace(' ', '-');
+
+                var codeOwnersFile = (team != null) ? $"* @{_organisation}/{teamName} " : "* ";
+                var commonDevelopersTeam = await GetTeamByName(RepositoryTgBotJobSettings.CommonDevelopersTeam);
+
+                var message = $"Library repository \"{repoToCreate.RepoName}\" successfully created.";
+                // Creating new repo
+                var newRepo = new NewRepository(repoToCreate.RepoName){AutoInit = true, Description = repoToCreate.Description};
+
+                var repositoryToEdit = await client.Repository.Create(_organisation, newRepo);
+
+                await client.Organization.Team.AddRepository(commonDevelopersTeam.Id, _organisation, repositoryToEdit.Name, new RepositoryPermissionRequest(Permission.Push));
+
+                var branchTeams = new BranchProtectionTeamCollection();
+
+                if (team != null)
+                {
+                    branchTeams.Add(teamName);
+                    message += $"\n Teams: \n \"{team.Name}\"";
+                }
+
+                var architectureTeam = RepositoryTgBotJobSettings.ArchitectureTeam.ToLower().Replace(' ', '-');
+                branchTeams.Add(architectureTeam);
+                codeOwnersFile += $"@{_organisation}/{architectureTeam} ";
+                message += $"\n \"{RepositoryTgBotJobSettings.ArchitectureTeam}\"";
+
+                //creating Code Owners file
+                await client.Repository.Content.CreateFile(repositoryToEdit.Id, "CODEOWNERS", new CreateFileRequest("Added CODEOWNERS file", codeOwnersFile));
+
+                var masterProtSett = new BranchProtectionSettingsUpdate(new BranchProtectionPushRestrictionsUpdate(new BranchProtectionTeamCollection(new List<string>() { teamName })));
+                await client.Repository.Branch.UpdateBranchProtection(repositoryToEdit.Id, "master", masterProtSett);
+
+                var link = repositoryToEdit.CloneUrl;
+                message += "\n Clone url: " + link;
+
+                return new TelegramBotActionResult { Success = true, Message = message };
+            }
+            catch (Exception ex)
+            {
+                return new TelegramBotActionResult { Success = false, Message = ex.Message };
+            }
         }
 
         public async Task<TelegramBotActionResult> CreateRepo(RepoToCreate repoToCreate)
