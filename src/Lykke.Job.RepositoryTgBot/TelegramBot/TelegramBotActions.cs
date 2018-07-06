@@ -20,6 +20,15 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         public string MenuAction { get; set; }
     }
 
+    public class BranchProtectionRequiredReviewsUpdateExtention : BranchProtectionRequiredReviewsUpdate
+    {
+        public int RequiredApprovingReviewCount { get; set; }
+
+        public BranchProtectionRequiredReviewsUpdateExtention(BranchProtectionRequiredReviewsDismissalRestrictionsUpdate dismissalRestrictions, bool dismissStaleReviews, bool requireCodeOwnerReviews, int _requiredApprovingReviewCount) : base(dismissalRestrictions, dismissStaleReviews, requireCodeOwnerReviews)
+        {
+            RequiredApprovingReviewCount = _requiredApprovingReviewCount;
+        }
+    }
 
     public class TelegramBotActions
     {
@@ -127,17 +136,30 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
                 //creating Code Owners file
                 await client.Repository.Content.CreateFile(repositoryToEdit.Id, "CODEOWNERS", new CreateFileRequest("Added CODEOWNERS file", codeOwnersFile));
+ 
+                var protSett = new BranchProtectionSettingsUpdate(null, new BranchProtectionRequiredReviewsUpdateExtention(new BranchProtectionRequiredReviewsDismissalRestrictionsUpdate(false), true, true, 2), new BranchProtectionPushRestrictionsUpdate(branchTeams), true);             
 
-                var masterProtSett = new BranchProtectionSettingsUpdate(new BranchProtectionPushRestrictionsUpdate(new BranchProtectionTeamCollection(new List<string>() { teamName })));
-                await client.Repository.Branch.UpdateBranchProtection(repositoryToEdit.Id, "master", masterProtSett);
+                //this method throws null reference ecxeption because responce
+                try
+                {
+                    await client.Connection.Put<BranchProtectionSettingsUpdate>(ApiUrls.RepoBranchProtection(repositoryToEdit.Id, "master"), protSett, null, "application/vnd.github.luke-cage-preview+json");
+
+                }
+                catch(Exception e)
+                {
+                    Console.WriteLine(e);
+                }
 
                 var link = repositoryToEdit.CloneUrl;
+
                 message += "\n Clone url: " + link;
+
 
                 return new TelegramBotActionResult { Success = true, Message = message };
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex);
                 return new TelegramBotActionResult { Success = false, Message = ex.Message };
             }
         }
