@@ -10,7 +10,5 @@ namespace Lykke.Job.RepositoryTgBot.Settings
 
         public SlackNotificationsSettings SlackNotifications { get; set; }
 
-        [Optional]
-        public MonitoringServiceClientSettings MonitoringServiceClient { get; set; }
     }
 }
