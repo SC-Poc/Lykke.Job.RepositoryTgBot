@@ -13,8 +13,9 @@
     "CommonDevelopersTeam": "",
     "SecurityTeam": "",
     "CoreTeam": "",
+    "ArchitectureTeam": "",
     "TimeoutPeriodSeconds": 30,
-    "AllowedGroupName": ""
+    "AllowedGroupId": 0
   },
 
   "SlackNotifications": {
