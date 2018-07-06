@@ -17,9 +17,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading.Tasks;
-using Lykke.Job.RepositoryTgBot.TelegramBot;
-using Lykke.SettingsReader.ReloadingManager;
-using Lykke.MonitoringServiceApiCaller;
 
 namespace Lykke.Job.RepositoryTgBot
 {
@@ -60,8 +57,6 @@ namespace Lykke.Job.RepositoryTgBot
 
                 var builder = new ContainerBuilder();
                 var appSettings = Configuration.LoadSettings<AppSettings>();
-                if (appSettings.CurrentValue.MonitoringServiceClient != null)
-                    _monitoringServiceUrl = appSettings.CurrentValue.MonitoringServiceClient.MonitoringServiceUrl;
 
                 Log = CreateLogWithSlack(services, appSettings);
 
@@ -126,9 +121,7 @@ namespace Lykke.Job.RepositoryTgBot
                 // NOTE: Job not yet recieve and process IsAlive requests here
 
                 await ApplicationContainer.Resolve<IStartupManager>().StartAsync();
-                await Log.WriteMonitorAsync("", Program.EnvInfo, "Started");
-
-                await AutoRegistrationInMonitoring.RegisterAsync(Configuration, _monitoringServiceUrl, Log);
+                await Log.WriteMonitorAsync("", Program.EnvInfo, "Started");               
             }
             catch (Exception ex)
             {
