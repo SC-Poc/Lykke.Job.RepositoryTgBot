@@ -94,7 +94,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             var firstWord = message.Text.Split(' ').First();
             var command = firstWord.IndexOf('@') == -1 ? firstWord : firstWord.Substring(0, firstWord.IndexOf('@'));
 
-            if (command == "/getGroupId")
+            if (command == "/groupId")
             {
                 await SendTextToUser(message.Chat.Id, $"Group Id: {message.Chat.Id}");
                 return;
