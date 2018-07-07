@@ -89,10 +89,19 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
             var message = messageEventArgs.Message;
 
+            if (message == null || message.Type != MessageType.Text) return;
+
+            var firstWord = message.Text.Split(' ').First();
+            var command = firstWord.IndexOf('@') == -1 ? firstWord : firstWord.Substring(0, firstWord.IndexOf('@'));
+
+            if (command == "/getGroupId")
+            {
+                await SendTextToUser(message.Chat.Id, $"Group Id: {message.Chat.Id}");
+                return;
+            }
+
             var result = await CheckForGroupAccess(message.Chat.Id, message.Chat.Id);
             if (!result) return;
-
-            if (message == null || message.Type != MessageType.Text) return;
 
             // get repository name and checking user
             if (message.ReplyToMessage?.Text == $"@{message.From.Username} \n" + _questionEnterName && TimeoutTimer.Working && CurrentUser.User.Id == message.From.Id)
@@ -239,8 +248,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             {
                 if (TimeoutTimer.Working && CurrentUser.User.Id == message.From.Id)
                     TimeoutTimer.Stop();
-                var firstWord = message.Text.Split(' ').First();
-                var command = firstWord.IndexOf('@') == -1 ? firstWord : firstWord.Substring(0, firstWord.IndexOf('@'));
                 switch (command)
                 {
 
@@ -292,9 +299,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
                     case "/resetMyTeam":
                         await ClearTeam(message.Chat.Id, message.From);
-                        break;
-                    case "/getGroupId":
-                        await SendTextToUser(message.Chat.Id, $"Group Id: {message.Chat.Id}");
                         break;
                     default:
                         //send default answer
