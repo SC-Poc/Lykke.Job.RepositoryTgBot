@@ -37,9 +37,9 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         private readonly ITelegramBotHistoryRepository _telegramBotHistoryRepository;
 
         #endregion
-        private readonly ILog _log;
+        public static ILog _log;
         private readonly ITelegramBotClient _bot;
-        private static TelegramBotActions _actions;
+        private static TelegramBotActions _actions = new TelegramBotActions(RepositoryTgBotJobSettings.OrgainzationName, RepositoryTgBotJobSettings.GitToken);
 
         #region Constants
 
@@ -66,7 +66,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
         public TelegramBotService(RepositoryTgBotJobSettings settings, ILog log, ITelegramBotHistoryRepository telegramBotHistoryRepository)
         {
-            _actions = new TelegramBotActions(RepositoryTgBotJobSettings.OrgainzationName, RepositoryTgBotJobSettings.GitToken, log);
             _telegramBotHistoryRepository = telegramBotHistoryRepository;
 
             _log = log;
@@ -85,6 +84,8 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         {
             try
             {
+                if (!CheckTotalTimeLimit(messageEventArgs.Message.Date)) return;
+
 #if DEBUG
                 Console.WriteLine("BotOnMessageReceived - " + messageEventArgs.Message.Text);
 #endif
@@ -322,6 +323,8 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         {
             try
             {
+                if (!CheckTotalTimeLimit(callbackQueryEventArgs.CallbackQuery.Message.Date)) return;
+
                 //Here implements actions on reciving
                 var callbackQuery = callbackQueryEventArgs.CallbackQuery;
 
@@ -844,6 +847,17 @@ Usage:
             }
 
 
+        }
+
+        private bool CheckTotalTimeLimit(DateTime dateTime)
+        {
+            var timeSpan = DateTime.Now.Subtract(dateTime);
+            if(timeSpan.TotalMinutes > RepositoryTgBotJobSettings.TotalTimeLimitInMinutes)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         class TeamByNameComparer : IComparer<Team>
