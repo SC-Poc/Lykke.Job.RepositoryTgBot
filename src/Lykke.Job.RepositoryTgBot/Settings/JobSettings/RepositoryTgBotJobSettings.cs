@@ -13,5 +13,6 @@
         public static string CoreTeam { get; set; }
         public static int TimeoutPeriodSeconds { get; set; }
         public static long AllowedGroupId { get; set; }
+        public static int TotalTimeLimitInMinutes { get; set; }
     }
 }
