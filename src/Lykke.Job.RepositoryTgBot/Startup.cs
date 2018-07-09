@@ -132,7 +132,7 @@ namespace Lykke.Job.RepositoryTgBot
             }
             catch (Exception ex)
             {
-                await Log.WriteFatalErrorAsync(nameof(Startup), nameof(StartApplication), " ", ex);
+                await Log.WriteFatalErrorAsync(nameof(Startup), nameof(StartApplication), "", ex);
                 throw;
             }
         }
