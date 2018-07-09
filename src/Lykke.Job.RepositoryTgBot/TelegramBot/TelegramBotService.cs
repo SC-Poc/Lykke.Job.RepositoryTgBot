@@ -851,7 +851,8 @@ Usage:
 
         private bool CheckTotalTimeLimit(DateTime dateTime)
         {
-            var timeSpan = DateTime.Now.Subtract(dateTime);
+            var exactTimeNow = DateTime.Now.ToUniversalTime();
+            var timeSpan = exactTimeNow.Subtract(dateTime);
             if(timeSpan.TotalMinutes > RepositoryTgBotJobSettings.TotalTimeLimitInMinutes)
             {
                 return false;
