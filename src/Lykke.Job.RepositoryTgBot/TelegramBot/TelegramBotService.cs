@@ -94,8 +94,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
                 if (message == null || message.Type != MessageType.Text) return;
 
-                await _log.WriteInfoAsync("TelegramBotService.BotOnMessageReceived", "Command received", message.ReplyToMessage?.Text);
-
                 var firstWord = message.Text.Split(' ').First();
                 var command = firstWord.IndexOf('@') == -1 ? firstWord : firstWord.Substring(0, firstWord.IndexOf('@'));
 
@@ -328,8 +326,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 //Here implements actions on reciving
                 var callbackQuery = callbackQueryEventArgs.CallbackQuery;
 
-                await _log.WriteInfoAsync("TelegramBotService.BotOnCallbackQueryReceived", "Callback Query Received", callbackQuery.Data);
-
                 var result = await CheckForGroupAccess(callbackQuery.Message.Chat.Id, callbackQuery.Message.Chat.Id);
                 if (!result) return;
 
@@ -364,8 +360,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         {
             try
             {
-                await _log.WriteInfoAsync("TelegramBotService.SendResponseMarkup", "Send markup to user", "");
-
                 var historyCreateSkipped = false;
                 if (TimeoutTimer.Working && CurrentUser.User.Id != callbackQuery.From.Id)
                 {
@@ -530,8 +524,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             var data = new { chatId, user, teamId }.ToJson();
             try
             {
-                await _log.WriteInfoAsync("TelegramBotService.Teamselected", "Team selected message", data);
-
                 TimeoutTimer.Stop();
                 var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == chatId && x.UserId == user.Id);
                 if (prevQuestion == null || prevQuestion.Question == _chooseTeam)
@@ -570,8 +562,6 @@ Usage:
             var data = new { chatId, userId, telegramUserName, question, answer }.ToJson();
             try
             {
-                await _log.WriteInfoAsync("TelegramBotService.CreateBotHistory", "Create bot history", data);
-
                 var entity = new TelegramBotHistory
                 {
                     RowKey = Guid.NewGuid().ToString(),
@@ -609,8 +599,6 @@ Usage:
             var data = new { username, teamsToShow, message }.ToJson();
             try
             {
-                _log.WriteInfo("TelegramBotService.TeamListToSend", "Get team list to send", data);
-
                 var inlineMessage = new InlineMessage();
                 var maxRowLength = 2;
                 if (teamsToShow.Any())
@@ -648,8 +636,6 @@ Usage:
             var data = new { chatId, userId }.ToJson();
             try
             {
-                await _log.WriteInfoAsync("TelegramBotService.CreateRepoAsync", "Create repo async", data);
-
                 var result = new TelegramBotActionResult();
                 var repoToCreate = await GetRepoToCreate(chatId, userId);
                 if (repoToCreate.MenuAction == _createGithubRepo)
@@ -690,8 +676,6 @@ Usage:
             var data = new { chatId, userId, userName, teamName }.ToJson();
             try
             {
-                await _log.WriteInfoAsync("TelegramBotService.GetMenuAction", "Get menu action", data);
-
                 var question = String.Empty;
 
                 if (!String.IsNullOrEmpty(teamName))
@@ -720,8 +704,6 @@ Usage:
             var data = new { chatId, userId }.ToJson();
             try
             {
-                await _log.WriteInfoAsync("TelegramBotService.GetRepoToCreate", "Get RepoToCreate entity", data);
-
                 var repoToCreate = new RepoToCreate
                 {
                     ChatId = chatId,
@@ -770,8 +752,6 @@ Usage:
             var data = new { chatId, userId }.ToJson();
             try
             {
-                await _log.WriteInfoAsync("TelegramBotService.GetTeamName", "Get team name", data);
-
                 var entity = await _telegramBotHistoryRepository.GetLatestAsync(x =>
                     x.Question == _chooseTeam && x.ChatId == chatId && x.UserId == userId);
                 if (entity == null)
@@ -793,8 +773,6 @@ Usage:
             var data = new { chatId, user }.ToJson();
             try
             {
-                await _log.WriteInfoAsync("TelegramBotService.ClearTeam", "Clear team", data);
-
                 var entities = await _telegramBotHistoryRepository.GetAllAsync(x =>
                     x.Question == _chooseTeam && x.ChatId == chatId && x.UserId == user.Id);
                 if (entities != null)
