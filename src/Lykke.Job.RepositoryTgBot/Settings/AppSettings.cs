@@ -9,6 +9,5 @@ namespace Lykke.Job.RepositoryTgBot.Settings
         public RepositoryTgBotJobSettings RepositoryTgBotJob { get; set; }
 
         public SlackNotificationsSettings SlackNotifications { get; set; }
-
     }
 }
