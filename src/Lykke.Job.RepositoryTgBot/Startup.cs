@@ -22,8 +22,6 @@ namespace Lykke.Job.RepositoryTgBot
 {
     public class Startup
     {
-        private string _monitoringServiceUrl;
-
         public IHostingEnvironment Environment { get; }
         public IContainer ApplicationContainer { get; private set; }
         public IConfigurationRoot Configuration { get; }
@@ -121,9 +119,7 @@ namespace Lykke.Job.RepositoryTgBot
                 // NOTE: Job not yet recieve and process IsAlive requests here
 
                 await ApplicationContainer.Resolve<IStartupManager>().StartAsync();
-                await Log.WriteMonitorAsync("", Program.EnvInfo, "Started");
-
-                await AutoRegistrationInMonitoring.RegisterAsync(Configuration, _monitoringServiceUrl, Log); 
+                await Log.WriteMonitorAsync("", Program.EnvInfo, "Started"); 
             }
             catch (Exception ex)
             {
