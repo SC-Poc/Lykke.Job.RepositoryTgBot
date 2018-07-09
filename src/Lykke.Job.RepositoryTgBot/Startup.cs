@@ -121,7 +121,9 @@ namespace Lykke.Job.RepositoryTgBot
                 // NOTE: Job not yet recieve and process IsAlive requests here
 
                 await ApplicationContainer.Resolve<IStartupManager>().StartAsync();
-                await Log.WriteMonitorAsync("", Program.EnvInfo, "Started");               
+                await Log.WriteMonitorAsync("", Program.EnvInfo, "Started");
+
+                await AutoRegistrationInMonitoring.RegisterAsync(Configuration, _monitoringServiceUrl, Log); 
             }
             catch (Exception ex)
             {
