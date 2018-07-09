@@ -50,8 +50,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         {
             try
             {
-                // await TelegramBotService._log.WriteInfoAsync("TelegramBotActions.GetTeamsAsync", "Get teams async", "");
-
                 var teams = await client.Organization.Team.GetAll(_organisation);
 
                 var teamsList = new List<Team>();
@@ -76,8 +74,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         {
             try
             {
-                await TelegramBotService._log.WriteInfoAsync("TelegramBotActions.RepositoryIsExist", "Check if repository exists", RepoName);
-
                 var repo = await client.Repository.Get(_organisation, RepoName);
 
                 return (repo != null);
@@ -93,8 +89,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         {
             try
             {
-                await TelegramBotService._log.WriteInfoAsync("TelegramBotActions.UserHasTeamCheckAsync", "Check if user has team", nickName);
-
                 var teams = await client.Organization.Team.GetAll(_organisation);
 
                 var listTeams = new List<Team>();
@@ -131,8 +125,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         {
             try
             {
-                await TelegramBotService._log.WriteInfoAsync("TelegramBotActions.CreateLibraryRepo", "Create library repository", repoToCreate.ToJson());
-
                 var team = await client.Organization.Team.Get(repoToCreate.TeamId);
                 var teamName = team.Name.ToLower().Replace(' ', '-');
 
@@ -195,8 +187,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         {
             try
             {
-                await TelegramBotService._log.WriteInfoAsync("TelegramBotActions.CreateRepo", "Create repository", repoToCreate.ToJson());
-
                 var team = await client.Organization.Team.Get(repoToCreate.TeamId);
                 var teamName = team.Name.ToLower().Replace(' ', '-');
 
@@ -271,8 +261,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             var data = new { nickName, teamId }.ToJson();
             try
             {
-                await TelegramBotService._log.WriteInfoAsync("TelegramBotActions.AddUserInTeam", "Add user in team", data);
-
                 var team = await client.Organization.Team.Get(teamId);
 
                 if (team == null)
