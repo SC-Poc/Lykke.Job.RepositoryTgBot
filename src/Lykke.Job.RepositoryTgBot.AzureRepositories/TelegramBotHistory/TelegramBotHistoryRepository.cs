@@ -37,7 +37,7 @@ namespace Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory
             var pk = TelegramBotHistory.GeneratePartitionKey();
             var list = await _tableStorage.GetDataAsync(pk);
             var orderedList = list.OrderByDescending(x => x.Timestamp);
-            return orderedList.Where(filter).FirstOrDefault();
+            return orderedList.FirstOrDefault(filter);
         }
 
         public async Task<bool> SaveAsync(ITelegramBotHistory entity)
@@ -49,12 +49,7 @@ namespace Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory
                     tbh = (TelegramBotHistory) await GetAsync(entity.RowKey) ?? new TelegramBotHistory();
 
                     tbh.ETag = entity.ETag;
-                    tbh.ChatId = entity.ChatId;
-                    tbh.UserId = entity.UserId;
-                    tbh.TelegramUserName = entity.TelegramUserName;
-                    tbh.GithubUserName = entity.GithubUserName;
-                    tbh.Question = entity.Question;
-                    tbh.Answer = entity.Answer;
+                    tbh.Entities = entity.Entities;
                 }
 
                 tbh.PartitionKey = TelegramBotHistory.GeneratePartitionKey();
@@ -64,6 +59,28 @@ namespace Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory
                 return true;
             }
             catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> SaveRangeAsync(IEnumerable<ITelegramBotHistory> entities)
+        {
+            try
+            {
+                foreach (var item in entities)
+                {
+                    var entity = (TelegramBotHistory)item;
+                    if(entity.PartitionKey == null)
+                    {
+                        entity.PartitionKey = TelegramBotHistory.GeneratePartitionKey();
+                    }
+                    await _tableStorage.InsertOrMergeAsync(entity);
+                }
+
+                return true;
+            }
+            catch(Exception ex)
             {
                 return false;
             }
