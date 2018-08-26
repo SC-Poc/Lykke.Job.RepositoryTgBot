@@ -9,13 +9,15 @@
     "BotName": "RepositoryTgBot",
     "BotToken": "",
     "GitToken": "",
-    "OrgainzationName": "",
+    "OrgainzationName": "TgBotTestOrg",
     "CommonDevelopersTeam": "",
     "SecurityTeam": "",
     "CoreTeam": "",
     "ArchitectureTeam": "",
+    "LykkeDevelopersServiceUrl": "http://localhost:5000",
     "TimeoutPeriodSeconds": 30,
-    "AllowedGroupId": 0
+    "AllowedGroupId": 0,
+    "TotalTimeLimitInMinutes": 5
   },
 
   "SlackNotifications": {

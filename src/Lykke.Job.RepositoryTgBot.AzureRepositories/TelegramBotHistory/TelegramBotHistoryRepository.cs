@@ -35,7 +35,7 @@ namespace Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory
         public async Task<ITelegramBotHistory> GetLatestAsync(Func<ITelegramBotHistory, bool> filter)
         {
             var pk = TelegramBotHistory.GeneratePartitionKey();
-            var list = await _tableStorage.GetDataAsync(pk);
+            var list = await _tableStorage.GetDataAsync(pk, filter);
             var orderedList = list.OrderByDescending(x => x.Timestamp);
             return orderedList.Where(filter).FirstOrDefault();
         }
