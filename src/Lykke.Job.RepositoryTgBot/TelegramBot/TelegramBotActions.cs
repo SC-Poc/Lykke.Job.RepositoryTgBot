@@ -70,19 +70,18 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             }
         }
 
-        public async Task<bool> RepositoryIsExist(string RepoName)
+        public async Task<bool> IsRepositoryExist(string RepoName)
         {
             try
             {
                 var repo = await client.Repository.Get(_organisation, RepoName);
-
                 return (repo != null);
             }
-            catch (Exception e)
+            catch
             {
-                await TelegramBotService._log.WriteErrorAsync("TelegramBotActions.RepositoryIsExist", RepoName, e);
                 return false;
             }
+
         }
 
         public async Task<List<Team>> UserHasTeamCheckAsync(string nickName)
