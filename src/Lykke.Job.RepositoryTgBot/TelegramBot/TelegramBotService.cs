@@ -120,7 +120,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                         }
                         else
                         {
-                            var repoIsAlreadyExists = await _actions.RepositoryIsExist(message.Text);
+                            var repoIsAlreadyExists = await _actions.IsRepositoryExist(message.Text);
                             if (repoIsAlreadyExists)
                             {
                                 await SendTextToUser(message.Chat.Id, $"@{message.From.Username} \n" + "Repository with this name already exists.");
@@ -150,7 +150,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                     var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == message.Chat.Id && x.UserId == message.From.Id);
 
                     var teamName = await GetTeamName(message.Chat.Id, message.From.Id);
-                    var checkMenuType = await GetMenuAction(message.Chat.Id, message.From.Id, message.From.Username, teamName);
+                    var checkMenuType = await GetMenuAction(message.Chat.Id, message.From.Id);
                     if (checkMenuType == _createLibraryRepo)
                     {
                         var question = await CreateRepoAsync(message.Chat.Id, message.From.Id);
@@ -671,25 +671,13 @@ Usage:
             }
         }
 
-        private async Task<string> GetMenuAction(long chatId, long userId, string userName, string teamName)
+        private async Task<string> GetMenuAction(long chatId, long userId)
         {
-            var data = new { chatId, userId, userName, teamName }.ToJson();
+            var data = new { chatId, userId }.ToJson();
             try
             {
-                var question = String.Empty;
 
-                if (!String.IsNullOrEmpty(teamName))
-                {
-                    var addTeam = $"\nYour team is \"{teamName}\"";
-
-                    question = $"@{userName} \n" + _mainMenu + addTeam;
-                }
-                else
-                {
-                    question = $"@{userName} \n" + _mainMenu;
-                }
-
-                var history = await _telegramBotHistoryRepository.GetLatestAsync(x => x.Question == question && x.ChatId == chatId && x.UserId == userId);
+                var history = await _telegramBotHistoryRepository.GetLatestAsync(x => x.Question.Contains(_mainMenu) && x.ChatId == chatId && x.UserId == userId);
                 return history?.Answer;
             }
             catch (Exception ex)
@@ -737,6 +725,8 @@ Usage:
                             break;
                     }
                 }
+
+                repoToCreate.MenuAction = await GetMenuAction(chatId, userId);
 
                 return repoToCreate;
             }
