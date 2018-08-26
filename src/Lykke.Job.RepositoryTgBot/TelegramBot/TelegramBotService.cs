@@ -154,6 +154,8 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                     if (checkMenuType == _createLibraryRepo)
                     {
                         var question = await CreateRepoAsync(message.Chat.Id, message.From.Id);
+                        await SendTextToUser(message.Chat.Id, $"@{message.From.Username} \n" + "Creating library repository. Please wait...");
+
                         await CreateBotHistory(message.Chat.Id, message.From.Id, message.From.Username, question, message.Text);
                     }
                     else if (prevQuestion != null && prevQuestion.Question == _questionEnterDesc && teamName != RepositoryTgBotJobSettings.SecurityTeam)
