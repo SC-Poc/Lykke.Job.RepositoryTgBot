@@ -1,15 +1,18 @@
-using Autofac;
+﻿using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using AzureStorage.Tables;
 using Common.Log;
 using Lykke.Common.Api.Contract.Responses;
 using Lykke.Common.ApiLibrary.Middleware;
 using Lykke.Common.ApiLibrary.Swagger;
+using Lykke.Common.Log;
 using Lykke.Job.RepositoryTgBot.Core.Services;
 using Lykke.Job.RepositoryTgBot.Modules;
 using Lykke.Job.RepositoryTgBot.Settings;
 using Lykke.Logs;
+using Lykke.Logs.Loggers.LykkeSlack;
 using Lykke.SettingsReader;
+using Lykke.SettingsReader.ReloadingManager;
 using Lykke.SlackNotification.AzureQueue;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -26,6 +29,8 @@ namespace Lykke.Job.RepositoryTgBot
         public IContainer ApplicationContainer { get; private set; }
         public IConfigurationRoot Configuration { get; }
         public ILog Log { get; private set; }
+
+        public IHealthNotifier HealthNotifier { get; set; }
 
         public Startup(IHostingEnvironment env)
         {
@@ -54,24 +59,34 @@ namespace Lykke.Job.RepositoryTgBot
                 });
 
                 var builder = new ContainerBuilder();
-                var appSettings = Configuration.LoadSettings<AppSettings>();
+                var _settings = Configuration.Get<AppSettings>();
+                var appSettings = ConstantReloadingManager.From(_settings);
 
-                Log = CreateLogWithSlack(services, appSettings);
+                // Log = CreateLogWithSlack(services, appSettings);
 
-                builder.RegisterModule(new JobModule(appSettings.CurrentValue.RepositoryTgBotJob, appSettings.Nested(x => x.RepositoryTgBotJob), Log));
+                services.AddLykkeLogging(
+                    appSettings.ConnectionString(x=>x.RepositoryTgBotJob.Db.LogsConnString),
+                    "RepositoryTgBotLog",
+                    appSettings.CurrentValue.SlackNotifications.AzureQueue.ConnectionString,
+                    appSettings.CurrentValue.SlackNotifications.AzureQueue.QueueName
+                );
 
-                builder.RegisterModule(new DbModule(appSettings, Log));
+                builder.RegisterModule(new JobModule(appSettings.CurrentValue.RepositoryTgBotJob));
+
+                builder.RegisterModule(new DbModule(appSettings));
 
                 builder.Populate(services);
 
                 ApplicationContainer = builder.Build();
 
+                Log = ApplicationContainer.Resolve<ILogFactory>().CreateLog(this); 
+                HealthNotifier = ApplicationContainer.Resolve<IHealthNotifier>(); 
 
                 return new AutofacServiceProvider(ApplicationContainer);
             }
             catch (Exception ex)
             {
-                Log?.WriteFatalError(nameof(Startup), nameof(ConfigureServices), ex);
+                Log?.Critical(ex);
                 throw;
             }
         }
@@ -107,7 +122,7 @@ namespace Lykke.Job.RepositoryTgBot
             }
             catch (Exception ex)
             {
-                Log?.WriteFatalError(nameof(Startup), nameof(Configure), ex);
+                Log?.Critical(ex);
                 throw;
             }
         }
@@ -119,11 +134,11 @@ namespace Lykke.Job.RepositoryTgBot
                 // NOTE: Job not yet recieve and process IsAlive requests here
 
                 await ApplicationContainer.Resolve<IStartupManager>().StartAsync();
-                await Log.WriteMonitorAsync("", Program.EnvInfo, "Started"); 
+                HealthNotifier.Notify("Started");
             }
             catch (Exception ex)
             {
-                await Log.WriteFatalErrorAsync(nameof(Startup), nameof(StartApplication), "", ex);
+                Log.Critical(ex);
                 throw;
             }
         }
@@ -140,7 +155,7 @@ namespace Lykke.Job.RepositoryTgBot
             {
                 if (Log != null)
                 {
-                    await Log.WriteFatalErrorAsync(nameof(Startup), nameof(StopApplication), "", ex);
+                    Log.Critical(ex);
                 }
                 throw;
             }
@@ -154,7 +169,7 @@ namespace Lykke.Job.RepositoryTgBot
                 
                 if (Log != null)
                 {
-                    await Log.WriteMonitorAsync("", Program.EnvInfo, "Terminating");
+                    HealthNotifier.Notify("Terminating");
                 }
                 
                 ApplicationContainer.Dispose();
@@ -163,56 +178,11 @@ namespace Lykke.Job.RepositoryTgBot
             {
                 if (Log != null)
                 {
-                    await Log.WriteFatalErrorAsync(nameof(Startup), nameof(CleanUp), "", ex);
+                    Log.Critical(ex);
                     (Log as IDisposable)?.Dispose();
                 }
                 throw;
             }
-        }
-
-        private static ILog CreateLogWithSlack(IServiceCollection services, IReloadingManager<AppSettings> settings)
-        {
-            var consoleLogger = new LogToConsole();
-            var aggregateLogger = new AggregateLogger();
-
-            aggregateLogger.AddLog(consoleLogger);
-
-            var dbLogConnectionStringManager = settings.Nested(x => x.RepositoryTgBotJob.Db.LogsConnString);
-            var dbLogConnectionString = dbLogConnectionStringManager.CurrentValue;
-
-            if (string.IsNullOrEmpty(dbLogConnectionString))
-            {
-                consoleLogger.WriteWarningAsync(nameof(Startup), nameof(CreateLogWithSlack), "Table loggger is not inited").Wait();
-                return aggregateLogger;
-            }
-
-            if (dbLogConnectionString.StartsWith("${") && dbLogConnectionString.EndsWith("}"))
-                throw new InvalidOperationException($"LogsConnString {dbLogConnectionString} is not filled in settings");
-
-            var persistenceManager = new LykkeLogToAzureStoragePersistenceManager(
-                AzureTableStorage<LogEntity>.Create(dbLogConnectionStringManager, "RepositoryTgBotLog", consoleLogger),
-                consoleLogger);
-
-            // Creating slack notification service, which logs own azure queue processing messages to aggregate log
-            var slackService = services.UseSlackNotificationsSenderViaAzureQueue(new AzureQueueIntegration.AzureQueueSettings
-            {
-                ConnectionString = settings.CurrentValue.SlackNotifications.AzureQueue.ConnectionString,
-                QueueName = settings.CurrentValue.SlackNotifications.AzureQueue.QueueName
-            }, aggregateLogger);
-
-            var slackNotificationsManager = new LykkeLogToAzureSlackNotificationsManager(slackService, consoleLogger);
-
-            // Creating azure storage logger, which logs own messages to concole log
-            var azureStorageLogger = new LykkeLogToAzureStorage(
-                persistenceManager,
-                slackNotificationsManager,
-                consoleLogger);
-
-            azureStorageLogger.Start();
-
-            aggregateLogger.AddLog(azureStorageLogger);
-
-            return aggregateLogger;
         }
     }
 }

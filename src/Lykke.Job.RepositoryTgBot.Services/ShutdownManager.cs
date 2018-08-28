@@ -1,5 +1,6 @@
 ﻿using Common;
 using Common.Log;
+using Lykke.Common.Log;
 using Lykke.Job.RepositoryTgBot.Core.Services;
 using System;
 using System.Collections.Generic;
@@ -34,7 +35,8 @@ namespace Lykke.Job.RepositoryTgBot.Services
                 }
                 catch (Exception ex)
                 {
-                    _log.WriteWarning(nameof(StopAsync), null, $"Unable to stop {item.GetType().Name}", ex);
+                    //_log.WriteWarning(nameof(StopAsync), null, $"Unable to stop {item.GetType().Name}", ex);
+                    _log.Warning($"Unable to stop {item.GetType().Name}", ex);
                 }
             }
 

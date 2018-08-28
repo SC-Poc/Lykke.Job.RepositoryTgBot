@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Common;
 using Common.Log;
+using Lykke.Common.Log;
 using Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory;
 using Lykke.Job.RepositoryTgBot.Core.Domain.TelegramBotHistory;
 using Lykke.Job.RepositoryTgBot.Settings.JobSettings;
@@ -314,7 +315,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync("TelegramBotService.BotOnMessageReceived", messageEventArgs.Message.ReplyToMessage?.Text, ex);
+                _log.Error(ex, context: messageEventArgs.Message.ReplyToMessage?.Text);
                 return;
             }
         }
@@ -346,7 +347,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync("TelegramBotService.BotOnCallbackQueryReceived", callbackQueryEventArgs.CallbackQuery.Message.Text, ex);
+                _log.Error(ex, context: callbackQueryEventArgs.CallbackQuery.Message.Text);
                 return;
             }
         }
@@ -474,7 +475,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync("TelegramBotService.SendResponseMarkup", callbackQuery.Data, ex);
+                _log.Error(ex, context: callbackQuery.Data);
                 return;
             }
         }
@@ -483,17 +484,17 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         {
             try
             {
-                _log.WriteInfo("TelegramBotService.Start", "Start", "");
+                _log.Info("Start");
 
                 var me = _bot.GetMeAsync().Result;
                 Console.Title = me.Username;
 
                 _bot.StartReceiving(Array.Empty<UpdateType>());
-                _log.WriteInfo(nameof(TelegramBotService), nameof(TelegramBotService), $"Start listening for @{me.Username}");
+                _log.Info($"Start listening for @{me.Username}");
             }
             catch (Exception ex)
             {
-                _log.WriteError("TelegramBotService.Start", "", ex);
+                _log.Error(ex);
                 return;
             }
         }
@@ -502,14 +503,14 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         {
             try
             {
-                _log.WriteInfo("TelegramBotService.Stop", "Stop", "");
+                _log.Info("Stop");
 
                 _bot.StopReceiving();
-                _log.WriteInfo(nameof(TelegramBotService), nameof(TelegramBotService), "Stop listening.");
+                _log.Info("Stop listening.");
             }
             catch (Exception ex)
             {
-                _log.WriteError("TelegramBotService.Stop", "", ex);
+                _log.Error(ex);
                 return;
             }
         }
@@ -523,7 +524,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
         private async Task TeamSelected(long chatId, Telegram.Bot.Types.User user, string teamId)
         {
-            var data = new { chatId, user, teamId }.ToJson();
+            var data = new { chatId, user, teamId };
             try
             {
                 TimeoutTimer.Stop();
@@ -541,7 +542,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync("TelegramBotService.TeamSelected", data, ex);
+                _log.Error(ex, context: data);
                 throw;
             }
         }
@@ -561,7 +562,7 @@ Usage:
 
         private async Task<bool> CreateBotHistory(long chatId, long userId, string telegramUserName, string question, string answer = null)
         {
-            var data = new { chatId, userId, telegramUserName, question, answer }.ToJson();
+            var data = new { chatId, userId, telegramUserName, question, answer };
             try
             {
                 var entity = new TelegramBotHistory
@@ -591,14 +592,14 @@ Usage:
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync("TelegramBotActions.CreateBotHistory", data, ex);
+                _log.Error(ex, context: data);
                 return false;
             }
         }
 
         private InlineMessage TeamListToSend(string username, List<Team> teamsToShow, string message = "")
         {
-            var data = new { username, teamsToShow, message }.ToJson();
+            var data = new { username, teamsToShow, message };
             try
             {
                 var inlineMessage = new InlineMessage();
@@ -628,7 +629,7 @@ Usage:
             }
             catch (Exception ex)
             {
-                _log.WriteError("TelegramBotActions.TeamListToSend", data, ex);
+                _log.Error(ex, context: data);
                 throw;
             }
         }
@@ -668,14 +669,14 @@ Usage:
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync("TelegramBotActions.CreateRepoAsync", data, ex);
+                _log.Error(ex, context: data);
                 throw;
             }
         }
 
         private async Task<string> GetMenuAction(long chatId, long userId)
         {
-            var data = new { chatId, userId }.ToJson();
+            var data = new { chatId, userId };
             try
             {
 
@@ -684,14 +685,14 @@ Usage:
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync("TelegramBotActions.GetMenuAction", data, ex);
+                _log.Error(ex, context: data);
                 throw;
             }
         }
 
         private async Task<RepoToCreate> GetRepoToCreate(long chatId, long userId)
         {
-            var data = new { chatId, userId }.ToJson();
+            var data = new { chatId, userId };
             try
             {
                 var repoToCreate = new RepoToCreate
@@ -734,14 +735,14 @@ Usage:
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync("TelegramBotActions.GetRepoToCreate", data, ex);
+                _log.Error(ex, context: data);
                 throw;
             }
         }
 
         public async Task<string> GetTeamName(long chatId, long userId)
         {
-            var data = new { chatId, userId }.ToJson();
+            var data = new { chatId, userId };
             try
             {
                 var entity = await _telegramBotHistoryRepository.GetLatestAsync(x =>
@@ -755,14 +756,14 @@ Usage:
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync("TelegramBotActions.GetTeamName", data, ex);
+                _log.Error(ex, context: data);
                 throw;
             }
         }
 
         public async Task ClearTeam(long chatId, Telegram.Bot.Types.User user)
         {
-            var data = new { chatId, user }.ToJson();
+            var data = new { chatId, user };
             try
             {
                 var entities = await _telegramBotHistoryRepository.GetAllAsync(x =>
@@ -778,7 +779,7 @@ Usage:
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync("TelegramBotActions.ClearTeam", data, ex);
+                _log.Error(ex, context: data);
                 throw;
             }
         }

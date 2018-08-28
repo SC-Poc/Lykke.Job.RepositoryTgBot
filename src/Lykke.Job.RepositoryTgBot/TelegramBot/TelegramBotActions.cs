@@ -1,5 +1,6 @@
 ﻿using Common;
 using Common.Log;
+using Lykke.Common.Log;
 using Lykke.Job.RepositoryTgBot.Settings.JobSettings;
 using Octokit;
 using System;
@@ -65,7 +66,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             }
             catch (Exception ex)
             {
-                await TelegramBotService._log.WriteErrorAsync("TelegramBotActions.GetTeamsAsync", "", ex);
+                TelegramBotService._log.Error(ex);
                 throw;
             }
         }
@@ -109,7 +110,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             }
             catch (Exception ex)
             {
-                await TelegramBotService._log.WriteErrorAsync("TelegramBotActions.UserHasTeamCheckAsync", nickName, ex);
+                TelegramBotService._log.Error(ex);
                 throw;
             }
         }
@@ -177,7 +178,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             catch (Exception ex)
             {
                 Console.WriteLine(ex);
-                await TelegramBotService._log.WriteErrorAsync("TelegramBotActions.CreateLibraryRepo", repoToCreate.ToJson(), ex);
+                TelegramBotService._log.Error(ex, context: repoToCreate);
                 return new TelegramBotActionResult { Success = false, Message = ex.Message };
             }
         }
@@ -243,7 +244,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             }
             catch (Exception ex)
             {
-                await TelegramBotService._log.WriteErrorAsync("TelegramBotActions.CreateRepo", repoToCreate.ToJson(), ex);
+                TelegramBotService._log.Error(ex, context: repoToCreate);
                 return new TelegramBotActionResult { Success = false, Message = ex.Message };
             }
 
@@ -257,7 +258,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         /// <returns> </returns>
         public async Task<TelegramBotActionResult> AddUserInTeam(string nickName, int teamId)
         {
-            var data = new { nickName, teamId }.ToJson();
+            var data = new { nickName, teamId };
             try
             {
                 var team = await client.Organization.Team.Get(teamId);
@@ -279,7 +280,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             }
             catch (Exception ex)
             {
-                await TelegramBotService._log.WriteErrorAsync("TelegramBotActions.AddUserInTeam", data, ex);
+                TelegramBotService._log.Error(ex, context: data);
                 return new TelegramBotActionResult { Success = false, Message = ex.Message };
             }
         }
