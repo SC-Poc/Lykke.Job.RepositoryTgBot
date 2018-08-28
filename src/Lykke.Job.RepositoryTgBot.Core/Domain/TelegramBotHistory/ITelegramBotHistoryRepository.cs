@@ -14,6 +14,8 @@ namespace Lykke.Job.RepositoryTgBot.Core.Domain.TelegramBotHistory
 
         Task<bool> SaveAsync(ITelegramBotHistory entity);
 
+        Task<bool> SaveRangeAsync(IEnumerable<ITelegramBotHistory> entities);
+
         Task RemoveAsync(string telegramBotHistoryId);
     }
 }
