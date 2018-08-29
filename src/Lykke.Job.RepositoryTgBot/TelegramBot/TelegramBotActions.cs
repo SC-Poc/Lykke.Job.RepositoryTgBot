@@ -156,7 +156,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
                 var protSett = new BranchProtectionSettingsUpdate(null, new BranchProtectionRequiredReviewsUpdateExtention(new BranchProtectionRequiredReviewsDismissalRestrictionsUpdate(false), true, true, 2), new BranchProtectionPushRestrictionsUpdate(branchTeams), true);
 
-                //this method throws null reference ecxeption because responce
+                //this method throws null reference ecxeption because responce it's OK
                 try
                 {
                     await client.Connection.Put<BranchProtectionSettingsUpdate>(ApiUrls.RepoBranchProtection(repositoryToEdit.Id, "master"), protSett, null, "application/vnd.github.luke-cage-preview+json");
@@ -164,7 +164,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e);
+                    //Console.WriteLine(e);
                 }
 
                 var link = repositoryToEdit.CloneUrl;
