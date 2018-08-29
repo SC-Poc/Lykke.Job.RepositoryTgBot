@@ -49,7 +49,6 @@ namespace Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory
                     tbh = (TelegramBotHistory) await GetAsync(entity.RowKey) ?? new TelegramBotHistory();
 
                     tbh.ETag = entity.ETag;
-                    tbh.Entities = entity.Entities;
                 }
 
                 tbh.PartitionKey = TelegramBotHistory.GeneratePartitionKey();
@@ -75,7 +74,7 @@ namespace Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory
                     {
                         entity.PartitionKey = TelegramBotHistory.GeneratePartitionKey();
                     }
-                    await _tableStorage.InsertOrMergeAsync(entity);
+                    await SaveAsync(entity);
                 }
 
                 return true;

@@ -34,7 +34,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
     {
         #region Statics
         public static ILog _log;
-        private static List<TelegramBotHistoryEntity> _history = new List<TelegramBotHistoryEntity>();
+        private static List<TelegramBotHistory> _history = new List<TelegramBotHistory>();
         #endregion
 
         #region Repositories
@@ -120,6 +120,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                     TimeoutTimer.Stop();
                     // var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == message.Chat.Id && x.UserId == message.From.Id);
                     var prevQuestion = _history.LastOrDefault();
+
                     if (prevQuestion != null && prevQuestion.Question == _questionEnterName)
                     {
                         if (!Regex.IsMatch(message.Text, @"^[a-zA-Z0-9._-]+$"))
@@ -156,16 +157,18 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 else if (message.ReplyToMessage?.Text == $"@{message.From.Username} \n" + _questionEnterDesc && TimeoutTimer.Working && CurrentUser.User.Id == message.From.Id)
                 {
                     TimeoutTimer.Stop();
-                    // var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == message.Chat.Id && x.UserId == message.From.Id);
+                    //var prevQuestion = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == message.Chat.Id && x.UserId == message.From.Id);
                     var prevQuestion = _history.LastOrDefault();
 
                     var teamName = await GetTeamName(message.Chat.Id, message.From.Id);
                     var checkMenuType = await GetMenuAction(message.Chat.Id, message.From.Id);
                     if (checkMenuType == _createLibraryRepo)
                     {
+                        await CreateBotHistory(message.Chat.Id, message.From.Id, message.From.Username, "Creating library repo", message.Text);
+                        await SendTextToUser(message.Chat.Id, $"@{message.From.Username} \n" + "Creating library repository. Please wait...");
                         var question = await CreateRepoAsync(message.Chat.Id, message.From.Id);
                         await CreateBotHistory(message.Chat.Id, message.From.Id, message.From.Username, question, message.Text);
-                        await SaveHistory(message.Chat.Id, message.From.Id, message.From.Username);
+                        await SaveHistory();
                     }
                     else if (prevQuestion != null && prevQuestion.Question == _questionEnterDesc && teamName != RepositoryTgBotJobSettings.SecurityTeam)
                     {
@@ -237,6 +240,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                                 var userTeam = gitUserTeamList.FirstOrDefault();
                                 await SendTextToUser(message.Chat.Id, $"@{message.From.Username} \n" + $"Your team is \"{userTeam.Name}\".");
                                 await TeamSelected(message.Chat.Id, message.From, userTeam.Id.ToString());
+
                             }
                             else
                             {
@@ -291,6 +295,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                                 {
                                 InlineKeyboardButton.WithCallbackData("Reset my team", _resetTeam)
                                 });
+                                await CreateBotHistory(message.Chat.Id, message.From.Id, message.From.Username, _chooseTeam, message.Text);
                             }
 
                             inlineMessage.ReplyMarkup = new InlineKeyboardMarkup(inlineKeyboard);
@@ -298,9 +303,9 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                             inlineMessage.Text = $"@{message.From.Username} \n" + _mainMenu + addTeam;
 
                             await _bot.SendTextMessageAsync(message.Chat.Id, inlineMessage.Text, replyMarkup: inlineMessage.ReplyMarkup);
-                            var botHistory = new TelegramBotHistoryEntity { Question = inlineMessage.Text };
 
-                            _history.Add(botHistory);
+                            await CreateBotHistory(message.Chat.Id, message.From.Id, message.From.Username, inlineMessage.Text, (TeamId != 0)? TeamId.ToString() : "");
+
                             break;
 
                         case "/resetMyTeam":
@@ -332,9 +337,11 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 var result = await CheckForGroupAccess(callbackQuery.Message.Chat.Id, callbackQuery.Message.Chat.Id);
                 if (!result) return;
 
-                if (callbackQuery.Message.Text.Contains(_chooseTeam))
+                if (TimeoutTimer.Working && callbackQuery.Message.Text.Contains(_chooseTeam))
                 {
+                    TimeoutTimer.Stop();
                     await TeamSelected(callbackQuery.Message.Chat.Id, callbackQuery.From, callbackQuery.Data);
+                    TimeoutTimer.Start();
                 }
                 else if (TimeoutTimer.Working && CurrentUser.User.Id != callbackQuery.From.Id)
                 {
@@ -414,7 +421,6 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
                             if (prevQuestion == null || prevQuestion.Question != _questionSecurity)
                             {
-                                Console.WriteLine(prevQuestion.Question);
                                 await SendTextToUser(message.Chat.Id);
                                 break;
                             }
@@ -459,6 +465,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                                 break;
                             }
                             prevQuestion.Answer = callbackQuery.Data;
+                            await CreateBotHistory(message.Chat.Id, callbackQuery.From.Id, callbackQuery.From.Username, "Creating repository");
 
                             await SendTextToUser(message.Chat.Id, $"@{callbackQuery.From.Username} \n" + "Creating repository. Please wait...");
 
@@ -476,7 +483,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                         await CreateBotHistory(message.Chat.Id, callbackQuery.From.Id, callbackQuery.From.Username, question, callbackQuery.Data);
 
                     if (saveHistory)
-                        await SaveHistory(message.Chat.Id, message.From.Id, message.From.Username);
+                        await SaveHistory();
                 }
             }
             catch (Exception ex)
@@ -540,6 +547,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 {
                     await _bot.SendTextMessageAsync(chatId, $"@{user.Username} \n" + _questionEnterName, replyMarkup: new ForceReplyMarkup { Selective = true });
                     await CreateBotHistory(chatId, user.Id, user.Username, _questionEnterName, teamId);
+                    await SaveHistory(false);
                     TimeoutTimer.Start();
                 }
                 else
@@ -571,7 +579,12 @@ Usage:
         {
             try
             {
-                var entity = new TelegramBotHistoryEntity { Question = question };
+                var entity = new TelegramBotHistory {
+                    ChatId = chatId,
+                    TelegramUserName = telegramUserName,
+                    UserId = userId,
+                    Question = question
+                };
 
                 // first of all, we need to add answer for previous question
                 if (!String.IsNullOrWhiteSpace(answer))
@@ -595,7 +608,7 @@ Usage:
                 await _log.WriteErrorAsync("TelegramBotActions.CreateBotHistory", data.ToJson(), ex);
                 return false;
             }
-        }
+        }        
 
         private InlineMessage TeamListToSend(string username, List<Team> teamsToShow, string message = "")
         {
@@ -679,8 +692,8 @@ Usage:
             var data = new { chatId, userId }.ToJson();
             try
             {
+                var history = _history.LastOrDefault(x => x.Question.Contains(_mainMenu));
 
-                var history = await _telegramBotHistoryRepository.GetLatestAsync(x => x.Question.Contains(_mainMenu) && x.ChatId == chatId && x.UserId == userId);
                 return history?.Answer;
             }
             catch (Exception ex)
@@ -730,6 +743,9 @@ Usage:
                     }
                 }
 
+                if (repoToCreate.TeamId == 0)
+                    repoToCreate.TeamId = await GetUserTeamId(chatId, userId);
+
                 repoToCreate.MenuAction = await GetMenuAction(chatId, userId);
 
                 return repoToCreate;
@@ -767,24 +783,14 @@ Usage:
             var data = new { chatId, user }.ToJson();
             try
             {
-                // var entities = await _telegramBotHistoryRepository.GetAllAsync(x => x.Question == _chooseTeam && x.ChatId == chatId && x.UserId == user.Id);
-                //var entity = _history.FirstOrDefault(x => x.Question == _chooseTeam);
-                var entities = await _telegramBotHistoryRepository.GetAllAsync(x => x.ChatId == chatId && x.UserId == user.Id && x.Entities != null && x.Entities.Any(e => e.Question == _chooseTeam));
+                var entities = await _telegramBotHistoryRepository.GetAllAsync(x =>
+                    x.Question == _chooseTeam && x.ChatId == chatId && x.UserId == user.Id);
                 if (entities != null)
                 {
                     foreach (var entity in entities)
                     {
-                        // await _telegramBotHistoryRepository.RemoveAsync(entity.RowKey);
-
-                        // iterate throught entity, get question - answer entity from Entities list and clear answer
-                        var QAEntity = entity?.Entities.FirstOrDefault(x => x.Question == _chooseTeam);
-                        if (!String.IsNullOrEmpty(QAEntity.Answer))
-                            QAEntity.Answer = String.Empty;
-
-                        // await _telegramBotHistoryRepository.SaveAsync(entity);
+                        await _telegramBotHistoryRepository.RemoveAsync(entity.RowKey);
                     }
-                    await _telegramBotHistoryRepository.SaveRangeAsync(entities);
-                    //_history.Remove(entity);
                 }
                 await SendTextToUser(chatId, $"@{user.Username} \n" + "Your team was reseted.");
             }
@@ -797,9 +803,8 @@ Usage:
 
         private async Task<int> GetUserTeamId(long chatId, long userId)
         {
-            // var entity1 = _history.FirstOrDefault(x => x.Question == _chooseTeam);
-            var entity = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == chatId && x.UserId == userId && x.Entities != null && x.Entities.Any(e => e.Question == _chooseTeam));
-            return entity?.Entities?.FirstOrDefault(x => x.Question == _chooseTeam)?.Answer?.ParseIntOrDefault(0) ?? 0;
+            var entity = await _telegramBotHistoryRepository.GetLatestAsync(x => x.ChatId == chatId && x.UserId == userId && x.Question == _chooseTeam);
+            return entity?.Answer.ParseIntOrDefault(0) ?? 0;
         }
 
         private async Task<bool> CheckForGroupAccess(long chatId, long groupId)
@@ -842,19 +847,15 @@ Usage:
             return true;
         }
 
-        private async Task SaveHistory(long chatId, long userId, string telegramUserName)
+        private async Task SaveHistory(bool clearHistory = true)
         {
-            var entity = new TelegramBotHistory
+            foreach(var item in _history)
             {
-                RowKey = Guid.NewGuid().ToString(),
-                ChatId = chatId,
-                UserId = userId,
-                TelegramUserName = telegramUserName,
-                Entities = _history
-            };
-
-            await _telegramBotHistoryRepository.SaveAsync(entity);
-            _history.Clear();
+                item.RowKey = Guid.NewGuid().ToString();
+                await _telegramBotHistoryRepository.SaveAsync(item);
+            }
+            if(clearHistory)
+                _history.Clear();
         }
 
         class TeamByNameComparer : IComparer<Team>

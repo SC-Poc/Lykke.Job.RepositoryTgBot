@@ -10,8 +10,8 @@ namespace Lykke.Job.RepositoryTgBot.Core.Domain.TelegramBotHistory
 
         string TelegramUserName { get; set; }
 
-        string GithubUserName { get; set; }
+        string Question { get; set; }
 
-        List<TelegramBotHistoryEntity> Entities { get; set; }
+        string Answer { get; set; }
     }
 }

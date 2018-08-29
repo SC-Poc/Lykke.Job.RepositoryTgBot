@@ -20,25 +20,18 @@ namespace Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory
 
         public string TelegramUserName { get; set; }
 
-        public string GithubUserName { get; set; }
-        
-        public List<TelegramBotHistoryEntity> Entities { get; set; }
+        public string Question { get; set; }
+
+        public string Answer { get; set; }
 
         public override void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)
         {
-            if(properties.TryGetValue("Entities", out var entities))
-            {
-                var json = entities.StringValue;
-                if (!string.IsNullOrEmpty(json))
-                {
-                    Entities = JsonConvert.DeserializeObject<List<TelegramBotHistoryEntity>>(json);
-                }
-            }
 
             if(properties.TryGetValue("ChatId", out var chatId))
             {
                 ChatId = chatId.Int64Value;
             }
+
 
             if(properties.TryGetValue("UserId", out var userId))
             {
@@ -50,11 +43,15 @@ namespace Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory
                 TelegramUserName = telegramUserName.StringValue;
             }
 
-            if(properties.TryGetValue("GithubUserName", out var githubUserName))
+            if (properties.TryGetValue("Question", out var question))
             {
-                GithubUserName = githubUserName.StringValue;
+                Question = question.StringValue;
             }
 
+            if (properties.TryGetValue("Answer", out var answer))
+            {
+                Answer = answer.StringValue;
+            }
 
         }
 
@@ -62,11 +59,11 @@ namespace Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory
         {
             var dict = new Dictionary<string, EntityProperty>
             {
-                { "Entities", new EntityProperty(JsonConvert.SerializeObject(Entities)) },
                 { "ChatId", new EntityProperty(ChatId) },
                 { "UserId", new EntityProperty(UserId) },
                 { "TelegramUserName", new EntityProperty(TelegramUserName) },
-                { "GithubUserName", new EntityProperty(GithubUserName) }
+                { "Question", new EntityProperty(Question) },
+                { "Answer", new EntityProperty(Answer) }
             };
 
             return dict;
