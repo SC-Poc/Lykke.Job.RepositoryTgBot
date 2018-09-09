@@ -6,11 +6,7 @@ namespace Lykke.Job.RepositoryTgBot.Core.Domain.TelegramBotHistory
     {
         long? ChatId { get; set; }
 
-        long? UserId { get; set; }
-
-        string TelegramUserName { get; set; }
-
-        string GithubUserName { get; set; }
+        long? DeveloperId { get; set; }
 
         List<TelegramBotHistoryEntity> Entities { get; set; }
     }

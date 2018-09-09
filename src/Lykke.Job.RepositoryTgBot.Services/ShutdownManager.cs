@@ -18,9 +18,9 @@ namespace Lykke.Job.RepositoryTgBot.Services
         private readonly ILog _log;
         private readonly IEnumerable<IStopable> _items;
 
-        public ShutdownManager(ILog log, IEnumerable<IStopable> items)
+        public ShutdownManager(ILogFactory logFactory, IEnumerable<IStopable> items)
         {
-            _log = log;
+            _log = logFactory.CreateLog(this);
             _items = items;
         }
 

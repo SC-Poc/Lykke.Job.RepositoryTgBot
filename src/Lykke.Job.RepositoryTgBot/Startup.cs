@@ -59,8 +59,10 @@ namespace Lykke.Job.RepositoryTgBot
                 });
 
                 var builder = new ContainerBuilder();
-                var _settings = Configuration.Get<AppSettings>();
-                var appSettings = ConstantReloadingManager.From(_settings);
+                //var _settings = Configuration.Get<AppSettings>();
+                //var appSettings = ConstantReloadingManager.From(_settings);
+
+                var appSettings = Configuration.LoadSettings<AppSettings>();
 
                 // Log = CreateLogWithSlack(services, appSettings);
 
@@ -101,7 +103,7 @@ namespace Lykke.Job.RepositoryTgBot
                 }
 
                 app.UseLykkeForwardedHeaders();
-                app.UseLykkeMiddleware("RepositoryTgBot", ex => new ErrorResponse {ErrorMessage = "Technical problem"});
+                app.UseLykkeMiddleware(ex => new ErrorResponse {ErrorMessage = "Technical problem"});
 
 
                 app.UseMvc();

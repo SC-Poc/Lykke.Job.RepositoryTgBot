@@ -27,7 +27,7 @@ namespace Lykke.Job.RepositoryTgBot.Modules
 
             builder.Register(c=>
                 new TelegramBotHistoryRepository(AzureTableStorage<TelegramBotHistory>.Create(connectionString,
-                "TelegramBotHistory", 
+                "TelegramBotHistory",
                 c.Resolve<ILogFactory>())))
                 .As<ITelegramBotHistoryRepository>()
                 .SingleInstance();

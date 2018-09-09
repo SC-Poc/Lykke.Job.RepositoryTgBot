@@ -16,11 +16,7 @@ namespace Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory
 
         public long? ChatId { get; set; }
 
-        public long? UserId { get; set; }
-
-        public string TelegramUserName { get; set; }
-
-        public string GithubUserName { get; set; }
+        public long? DeveloperId { get; set; }
         
         public List<TelegramBotHistoryEntity> Entities { get; set; }
 
@@ -40,22 +36,10 @@ namespace Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory
                 ChatId = chatId.Int64Value;
             }
 
-            if(properties.TryGetValue("UserId", out var userId))
+            if(properties.TryGetValue("DeveloperId", out var developerId))
             {
-                UserId = userId.Int64Value;
+                DeveloperId = developerId.Int64Value;
             }
-
-            if(properties.TryGetValue("TelegramUserName", out var telegramUserName))
-            {
-                TelegramUserName = telegramUserName.StringValue;
-            }
-
-            if(properties.TryGetValue("GithubUserName", out var githubUserName))
-            {
-                GithubUserName = githubUserName.StringValue;
-            }
-
-
         }
 
         public override IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext)
@@ -64,9 +48,7 @@ namespace Lykke.Job.RepositoryTgBot.AzureRepositories.TelegramBotHistory
             {
                 { "Entities", new EntityProperty(JsonConvert.SerializeObject(Entities)) },
                 { "ChatId", new EntityProperty(ChatId) },
-                { "UserId", new EntityProperty(UserId) },
-                { "TelegramUserName", new EntityProperty(TelegramUserName) },
-                { "GithubUserName", new EntityProperty(GithubUserName) }
+                { "DeveloperId", new EntityProperty(DeveloperId) }
             };
 
             return dict;

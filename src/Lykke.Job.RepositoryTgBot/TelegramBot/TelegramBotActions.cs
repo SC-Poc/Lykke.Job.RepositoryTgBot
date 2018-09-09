@@ -2,6 +2,7 @@
 using Common.Log;
 using Lykke.Common.Log;
 using Lykke.Job.RepositoryTgBot.Settings.JobSettings;
+using Lykke.Service.LykkeDevelopers.Client;
 using Octokit;
 using System;
 using System.Collections.Generic;
@@ -39,12 +40,16 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
         private static string _organisation;
         private static string _devTeam = RepositoryTgBotJobSettings.CommonDevelopersTeam;
+        public LykkeDevelopersClient DevClient;
 
-        public TelegramBotActions(string organisation, string token)
+        public TelegramBotActions(string organisation, string token, string lykkeDevelopersServiceUrl)
         {
             _organisation = organisation.ToLower().Replace(' ', '-');
             var tokenAuth = new Credentials(token);
             client.Credentials = tokenAuth;
+
+            HttpClientGenerator.HttpClientGenerator httpClientGenerator = HttpClientGenerator.HttpClientGenerator.BuildForUrl(lykkeDevelopersServiceUrl).Create();
+            DevClient = new LykkeDevelopersClient(httpClientGenerator);
         }
 
         public async Task<List<Team>> GetTeamsAsync()
@@ -71,18 +76,19 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             }
         }
 
-        public async Task<bool> IsRepositoryExist(string RepoName)
+        public async Task<bool> RepositoryIsExist(string RepoName)
         {
             try
             {
                 var repo = await client.Repository.Get(_organisation, RepoName);
+
                 return (repo != null);
             }
-            catch
+            catch (Exception e)
             {
+                TelegramBotService._log.Error(e, context: RepoName);
                 return false;
             }
-
         }
 
         public async Task<List<Team>> UserHasTeamCheckAsync(string nickName)
@@ -110,7 +116,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             }
             catch (Exception ex)
             {
-                TelegramBotService._log.Error(ex);
+                TelegramBotService._log.Error(ex, context:nickName);
                 throw;
             }
         }
@@ -244,7 +250,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
             }
             catch (Exception ex)
             {
-                TelegramBotService._log.Error(ex, context: repoToCreate);
+                TelegramBotService._log.Error(ex,context: repoToCreate);
                 return new TelegramBotActionResult { Success = false, Message = ex.Message };
             }
 
@@ -258,7 +264,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         /// <returns> </returns>
         public async Task<TelegramBotActionResult> AddUserInTeam(string nickName, int teamId)
         {
-            var data = new { nickName, teamId };
+            var data = new { nickName, teamId }.ToJson();
             try
             {
                 var team = await client.Organization.Team.Get(teamId);
@@ -283,6 +289,22 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 TelegramBotService._log.Error(ex, context: data);
                 return new TelegramBotActionResult { Success = false, Message = ex.Message };
             }
+        }
+
+        public async Task<TelegramBotActionResult> ResetTeam(string developerId)
+        {
+            var developer = await DevClient.Developer.GetDeveloper(developerId);
+            if (developer == null)
+                return new TelegramBotActionResult { Success = false, Message = "Developer not exists" };
+
+            developer.Team = null;
+
+            var result = await DevClient.Developer.SaveDeveloper(developer);
+
+            if (!result)
+                return new TelegramBotActionResult { Success = false, Message = "Error, not saved" };
+
+            return new TelegramBotActionResult { Success = true, Message = "Developer updated" };
         }
 
         public async Task<string> GetTeamById(int teamId)
