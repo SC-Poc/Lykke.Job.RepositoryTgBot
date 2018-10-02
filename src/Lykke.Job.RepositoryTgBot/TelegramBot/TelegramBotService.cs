@@ -152,8 +152,8 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                         })
                     };
 
-                    await _bot.SendTextMessageAsync(message.Chat.Id, inlineMessage.Text, replyMarkup: inlineMessage.ReplyMarkup);
                     await CreateBotHistory(message.Chat.Id, message.From.Id, message.From.Username, _questionSecurity, message.Text);
+                    await _bot.SendTextMessageAsync(message.Chat.Id, inlineMessage.Text, replyMarkup: inlineMessage.ReplyMarkup);
 
                     TimeoutTimer.Start();
                 }
