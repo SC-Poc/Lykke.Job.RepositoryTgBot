@@ -10,4 +10,10 @@
   <ItemGroup>
     <ProjectReference Include="..\Lykke.Job.RepositoryTgBot.Core\Lykke.Job.RepositoryTgBot.Core.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="Sodium.Core" Version="1.2.2" />
+  </ItemGroup>
+
 </Project>

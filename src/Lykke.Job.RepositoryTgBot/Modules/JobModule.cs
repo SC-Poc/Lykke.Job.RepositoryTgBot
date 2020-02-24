@@ -8,6 +8,7 @@ using Lykke.Job.RepositoryTgBot.Services;
 using Lykke.SettingsReader;
 using Lykke.Job.RepositoryTgBot.TelegramBot;
 using Common;
+using Lykke.Job.RepositoryTgBot.Services.GithubApi;
 
 namespace Lykke.Job.RepositoryTgBot.Modules
 {
@@ -53,6 +54,13 @@ namespace Lykke.Job.RepositoryTgBot.Modules
                 .As<IStartable>()
                 .As<IStopable>()
                 .WithParameter(TypedParameter.From(_settings))
+                .SingleInstance();
+
+            builder.RegisterType<GitHubApi>()
+                .As<IGitHubApi>()
+                .WithParameter("token", _settings.GitToken)
+                .WithParameter("appName", "RepositoryTgBot")
+                .WithParameter("appVersion", "1.0.0")
                 .SingleInstance();
 
             // TODO: Add your dependencies here

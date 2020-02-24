@@ -1,21 +1,28 @@
 {
-  //"SecTokenPassword": "TestPwd",
-
   "RepositoryTgBotJob": {
     "Db": {
       "LogsConnString": "UseDevelopmentStorage=true",
       "ConnectionString": "UseDevelopmentStorage=true"
     },
-    "BotName": "RepositoryTgBot",
-    "BotToken": "",
-    "GitToken": "",
-    "OrgainzationName": "",
-    "CommonDevelopersTeam": "",
+    "BotName": "<Bot name>",
+    "BotToken": "<Bot token>",
+    "GitToken": "<Git api token>",
+    "OrganizationName": "Git organization (owner)",
+    "CommonDevelopersTeam": "<Git team nema>",
     "SecurityTeam": "",
-    "CoreTeam": "",
+    "CoreTeam": "<Git team nema>",
     "ArchitectureTeam": "",
-    "TimeoutPeriodSeconds": 30,
-    "AllowedGroupId": 0
+    "TimeoutPeriodSeconds": 60,
+    "AllowedGroupId": 0,
+    "TotalTimeLimitInMinutes": 10,
+
+    "CommandChatId": <telegram chat id>,
+
+    "Secrets": {
+      "NugetToken": "<nuget token for push>",
+      "DockerUsername": "<githun user for push>",
+      "DockerSecret": "<github secret for push>"
+    }
   },
 
   "SlackNotifications": {
