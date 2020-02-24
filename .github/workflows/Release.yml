@@ -21,8 +21,6 @@ jobs:
       run: dotnet test --configuration Release
     - name: Publish
       run: dotnet publish ./src/Lykke.Job.RepositoryTgBot/Lykke.Job.RepositoryTgBot.csproj --output ./publish --configuration Release /p:AssemblyVersion=${GITHUB_REF#refs/tags/service-}
-    - name: Check dir
-      run: ls ./publish
     - name: Publish to Registry
       uses: SC-Poc/Publish-Docker-Github-Action@master
       with:
