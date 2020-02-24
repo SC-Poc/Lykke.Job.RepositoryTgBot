@@ -20,7 +20,7 @@ jobs:
     - name: Publish
       run: dotnet publish ./src/Lykke.Job.RepositoryTgBot/Lykke.Job.RepositoryTgBot.csproj --output ./publish --configuration Release /p:AssemblyVersion=1.0.0
     - name: Check dir
-      run: ls ./publish     
+      run: ls 
     - name: Publish to Registry
       uses: SC-Poc/Publish-Docker-Github-Action@master
       with:
