@@ -20,13 +20,13 @@ jobs:
     - name: Publish
       run: dotnet publish ./src/Lykke.Job.RepositoryTgBot/Lykke.Job.RepositoryTgBot.csproj --output ./publish --configuration Release /p:AssemblyVersion=1.0.0
     - name: Check dir
-      run: ls 
+      run: ls ./src/Lykke.Job.RepositoryTgBot/publish
     - name: Publish to Registry
       uses: SC-Poc/Publish-Docker-Github-Action@master
       with:
         name: swisschains/telegram-bot
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-        workdir: ./publish
+        workdir: ./src/Lykke.Job.RepositoryTgBot/publish
         # snapshot: true # use snapshot to push an additional image, which is tagged with {YEAR}{MONTH}{DAY}{HOUR}{MINUTE}{SECOND}{first 6 digits of the git sha}
         tag_names: true  
