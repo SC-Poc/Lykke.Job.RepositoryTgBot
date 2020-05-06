@@ -75,6 +75,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 settings.Secrets.NugetToken,
                 settings.Secrets.DockerUsername,
                 settings.Secrets.DockerSecret,
+                settings.Secrets.KubeConfigData,
                 settings.CommonDevelopersTeam);
 
             _telegramBotHistoryRepository = telegramBotHistoryRepository;

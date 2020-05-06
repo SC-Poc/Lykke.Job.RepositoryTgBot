@@ -21,5 +21,6 @@
         public string NugetToken { get; set; }
         public string DockerUsername { get; set; } 
         public string DockerSecret { get; set; }
+        public string KubeConfigData { get; set; }
     }
 }

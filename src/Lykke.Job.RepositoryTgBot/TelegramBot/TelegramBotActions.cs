@@ -43,17 +43,19 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
         private readonly string _nugetToken;
         private readonly string _dockerUsername;
         private readonly string _dockerSecret;
+        private readonly string _kubeConfigDataSecret;
         private readonly string _teamName;
         private static GitHubClient client = new GitHubClient(new ProductHeaderValue(RepositoryTgBotJobSettings.BotName));
         private GitHubApi api;
 
         private static string _organisation;
 
-        public TelegramBotActions(string organization, string token, string nugetToken, string dockerUsername, string dockerSecret, string teamName)
+        public TelegramBotActions(string organization, string token, string nugetToken, string dockerUsername, string dockerSecret, string kubeConfigDataSecret, string teamName)
         {
             _nugetToken = nugetToken;
             _dockerUsername = dockerUsername;
             _dockerSecret = dockerSecret;
+            _kubeConfigDataSecret = kubeConfigDataSecret;
             _teamName = teamName;
             _organisation = organization.ToLower().Replace(' ', '-');
             var tokenAuth = new Credentials(token);
@@ -156,6 +158,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
                 await api.SetSecret(_organisation, repoToCreate.RepoName, "DOCKER_PASSWORD", _dockerSecret, httpClient);
                 await api.SetSecret(_organisation, repoToCreate.RepoName, "NUGET_TOKEN", _nugetToken, httpClient);
                 await api.SetSecret(_organisation, repoToCreate.RepoName, "NUGET_TOCKEN", _nugetToken, httpClient);
+                await api.SetSecret(_organisation, repoToCreate.RepoName, "KUBE_CONFIG_DATA", _kubeConfigDataSecret, httpClient);
 
                 //var branchTeams = new BranchProtectionTeamCollection();
 

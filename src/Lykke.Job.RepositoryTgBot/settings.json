@@ -21,7 +21,8 @@
     "Secrets": {
       "NugetToken": "<nuget token for push>",
       "DockerUsername": "<githun user for push>",
-      "DockerSecret": "<github secret for push>"
+      "DockerSecret": "<github secret for push>",
+      "KubeConfigData": "<kube secret for restart pod>"
     }
   },
 
