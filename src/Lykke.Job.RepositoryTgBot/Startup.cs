@@ -195,18 +195,19 @@ namespace Lykke.Job.RepositoryTgBot
                 consoleLogger);
 
             // Creating slack notification service, which logs own azure queue processing messages to aggregate log
-            var slackService = services.UseSlackNotificationsSenderViaAzureQueue(new AzureQueueIntegration.AzureQueueSettings
-            {
-                ConnectionString = settings.CurrentValue.SlackNotifications.AzureQueue.ConnectionString,
-                QueueName = settings.CurrentValue.SlackNotifications.AzureQueue.QueueName
-            }, aggregateLogger);
+            // var slackService = services.UseSlackNotificationsSenderViaAzureQueue(new AzureQueueIntegration.AzureQueueSettings
+            // {
+            //     ConnectionString = settings.CurrentValue.SlackNotifications.AzureQueue.ConnectionString,
+            //     QueueName = settings.CurrentValue.SlackNotifications.AzureQueue.QueueName
+            // }, aggregateLogger);
 
-            var slackNotificationsManager = new LykkeLogToAzureSlackNotificationsManager(slackService, consoleLogger);
+            //var slackNotificationsManager = new LykkeLogToAzureSlackNotificationsManager(slackService, consoleLogger);
 
             // Creating azure storage logger, which logs own messages to concole log
             var azureStorageLogger = new LykkeLogToAzureStorage(
                 persistenceManager,
-                slackNotificationsManager,
+                //slackNotificationsManager,
+                null,
                 consoleLogger);
 
             azureStorageLogger.Start();
