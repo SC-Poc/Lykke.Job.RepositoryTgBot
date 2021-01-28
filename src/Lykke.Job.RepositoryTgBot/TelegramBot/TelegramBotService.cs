@@ -71,12 +71,7 @@ namespace Lykke.Job.RepositoryTgBot.TelegramBot
 
         public TelegramBotService(RepositoryTgBotJobSettings settings, ILog log, ITelegramBotHistoryRepository telegramBotHistoryRepository)
         {
-            _actions = new TelegramBotActions(settings.OrganizationName, settings.GitToken,
-                settings.Secrets.NugetToken,
-                settings.Secrets.DockerUsername,
-                settings.Secrets.DockerSecret,
-                settings.Secrets.KubeConfigData,
-                settings.CommonDevelopersTeam);
+            _actions = new TelegramBotActions(settings.OrganizationName, settings.GitToken, settings.CommonDevelopersTeam);
 
             _telegramBotHistoryRepository = telegramBotHistoryRepository;
 

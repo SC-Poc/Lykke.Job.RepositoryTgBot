@@ -13,14 +13,5 @@
         public static long AllowedGroupId { get; set; }
         public static int TotalTimeLimitInMinutes { get; set; }
         public long CommandChatId { get; set; }
-        public GithubSecrets Secrets { get; set; }
-    }
-
-    public class GithubSecrets
-    {
-        public string NugetToken { get; set; }
-        public string DockerUsername { get; set; } 
-        public string DockerSecret { get; set; }
-        public string KubeConfigData { get; set; }
     }
 }
