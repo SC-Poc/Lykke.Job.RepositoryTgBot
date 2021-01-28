@@ -19,6 +19,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lykke.Job.RepositoryTgBot.A
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lykke.Job.RepositoryTgBot.Tests", "tests\Lykke.Job.RepositoryTgBot.Tests\Lykke.Job.RepositoryTgBot.Tests.csproj", "{AAC9F450-14D7-4482-BC12-7C55006864E2}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{5070E6D2-3B68-45BE-A8BC-B49DF067D486}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{46579B71-5D87-4B9E-8864-713A6AE30091}"
+ProjectSection(SolutionItems) = preProject
+	.github\workflows\Release.yml = .github\workflows\Release.yml
+EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -54,6 +61,7 @@ Global
 		{D42134F9-A73E-4890-966D-746FE732934E} = {68994F01-8220-4B7C-9AB8-14E137C44AE5}
 		{1322B569-1032-4276-B86E-69F8BE3DC1F7} = {AA5ECC48-14C3-4BE7-AF0C-D59FCA2742C2}
 		{AAC9F450-14D7-4482-BC12-7C55006864E2} = {AB790991-CEB2-44A5-9C0C-A2D26DB86D41}
+		{46579B71-5D87-4B9E-8864-713A6AE30091} = {5070E6D2-3B68-45BE-A8BC-B49DF067D486}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D2419990-C093-4EE2-AFE9-80857ECBB147}
